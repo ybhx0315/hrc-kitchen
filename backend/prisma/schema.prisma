@@ -1,0 +1,154 @@
+// Prisma schema for HRC Kitchen
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STAFF
+  KITCHEN
+  ADMIN
+}
+
+enum OrderStatus {
+  PLACED
+  PREPARING
+  READY
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum MenuCategory {
+  MAIN
+  SIDE
+  DRINK
+  DESSERT
+  OTHER
+}
+
+enum Weekday {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  fullName      String    @map("full_name")
+  department    String?
+  location      String?
+  phone         String?
+  role          UserRole  @default(STAFF)
+  emailVerified Boolean   @default(false) @map("email_verified")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  orders        Order[]
+  configUpdates SystemConfig[] @relation("ConfigUpdatedBy")
+
+  @@map("users")
+}
+
+model MenuItem {
+  id              String        @id @default(uuid())
+  name            String
+  description     String?
+  price           Decimal       @db.Decimal(10, 2)
+  category        MenuCategory
+  imageUrl        String?       @map("image_url")
+  weekday         Weekday
+  dietaryTags     String[]      @default([]) @map("dietary_tags")
+  isActive        Boolean       @default(true) @map("is_active")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  customizations  MenuItemCustomization[]
+  orderItems      OrderItem[]
+
+  @@index([weekday, isActive])
+  @@map("menu_items")
+}
+
+model MenuItemCustomization {
+  id                String    @id @default(uuid())
+  menuItemId        String    @map("menu_item_id")
+  customizationName String    @map("customization_name")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  menuItem          MenuItem  @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@index([menuItemId])
+  @@map("menu_item_customizations")
+}
+
+model Order {
+  id                String        @id @default(uuid())
+  userId            String        @map("user_id")
+  orderNumber       String        @unique @map("order_number")
+  totalAmount       Decimal       @db.Decimal(10, 2) @map("total_amount")
+  paymentStatus     PaymentStatus @default(PENDING) @map("payment_status")
+  paymentId         String?       @map("payment_id")
+  fulfillmentStatus OrderStatus   @default(PLACED) @map("fulfillment_status")
+  specialRequests   String?       @map("special_requests")
+  orderDate         DateTime      @map("order_date") @db.Date
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  user              User          @relation(fields: [userId], references: [id])
+  orderItems        OrderItem[]
+
+  @@index([userId])
+  @@index([orderDate])
+  @@index([fulfillmentStatus])
+  @@map("orders")
+}
+
+model OrderItem {
+  id                String   @id @default(uuid())
+  orderId           String   @map("order_id")
+  menuItemId        String   @map("menu_item_id")
+  quantity          Int      @default(1)
+  customizations    Json?    @db.JsonB
+  priceAtPurchase   Decimal  @db.Decimal(10, 2) @map("price_at_purchase")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  // Relations
+  order             Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem          MenuItem @relation(fields: [menuItemId], references: [id])
+
+  @@index([orderId])
+  @@index([menuItemId])
+  @@map("order_items")
+}
+
+model SystemConfig {
+  id          String   @id @default(uuid())
+  configKey   String   @unique @map("config_key")
+  configValue String   @map("config_value")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  updatedBy   String?  @map("updated_by")
+
+  // Relations
+  updater     User?    @relation("ConfigUpdatedBy", fields: [updatedBy], references: [id])
+
+  @@map("system_config")
+}

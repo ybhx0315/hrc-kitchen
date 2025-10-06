@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+
+# Build output
+dist/
+
+# Logs
+logs/
+*.log
+
+# Prisma
+prisma/migrations/*_migration.sql
+
+# Tests
+coverage/
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
