@@ -19,7 +19,7 @@ HRC Kitchen is a web-based lunch ordering system for Huon Regional Care staff, f
 - Non-technical menu management interface
 
 ## Development Status
-- **Current Phase**: Phase 1 - MVP Implementation
+- **Current Phase**: Phase 2 Complete - Core User Flow Functional
 - **Completed**:
   - ✅ Project structure and monorepo setup
   - ✅ Backend API foundation (Node.js/Express/TypeScript)
@@ -38,17 +38,21 @@ HRC Kitchen is a web-based lunch ordering system for Huon Regional Care staff, f
     - Cart context with localStorage persistence
     - Cart drawer with quantity controls and customizations
     - Add to cart with customization options and special requests
-
-- **In Progress**:
-  - 🔨 Phase 2: Order placement and payment checkout
+  - ✅ **Phase 2 Complete**: Order placement and payment checkout
+    - Order API endpoints (`POST /api/v1/orders`, `GET /api/v1/orders`, `GET /api/v1/orders/:id`)
+    - Order service with transaction handling and Stripe integration
+    - Ordering window validation
+    - Checkout page with Stripe Elements card payment form
+    - Order confirmation page with order details
+    - Orders history page listing all user orders
+    - End-to-end tested: Menu → Cart → Checkout → Payment → Confirmation → Order History
 
 - **Next Steps**:
-  1. Order API endpoints and order creation logic
-  2. Checkout page with order summary
-  3. Stripe payment integration (frontend)
-  4. Order confirmation page
-  5. Kitchen dashboard for order management
-  6. Admin panel for menu and system management
+  1. Kitchen dashboard for order management and fulfillment
+  2. Admin panel for menu management
+  3. Admin panel for system configuration
+  4. Order status updates and notifications
+  5. Enhanced error handling and user feedback
 
 ## Technical Setup
 
@@ -69,8 +73,52 @@ After seeding, the following accounts are available:
 npm run dev  # Starts both backend (port 3000) and frontend (port 5173)
 ```
 
-## Notes
+## Key Implementation Details
+
+### Backend Architecture
+- **Order Service** (`backend/src/services/order.service.ts`):
+  - Creates orders with Stripe payment intents in a database transaction
+  - Validates ordering windows (8:00 AM - 10:30 AM on weekdays)
+  - Generates unique order numbers (format: ORD-YYYYMMDD-####)
+  - Stores customizations and special requests as JSON
+
+- **Payment Integration**:
+  - Static PaymentService methods for Stripe operations
+  - Payment intents created before order confirmation
+  - Webhook handlers for payment status updates
+  - Payment IDs stored directly on Order model
+
+### Frontend Architecture
+- **Pages**:
+  - `/menu` - Browse daily menu with cart functionality
+  - `/checkout` - Stripe Elements payment form
+  - `/order-confirmation/:orderId` - Order success page
+  - `/orders` - Order history with status tracking
+
+- **State Management**:
+  - CartContext with localStorage persistence
+  - AuthContext with JWT token management
+  - React Router for navigation
+
+### Data Flow
+1. User browses menu and adds items to cart (with customizations)
+2. Cart persisted to localStorage
+3. Checkout creates order and Stripe PaymentIntent
+4. User enters card details via Stripe Elements
+5. Payment confirmed → Order status updated → Redirect to confirmation
+6. User can view order history and details
+
+## Development Guidelines
+
+### Process Management
+**IMPORTANT**: Do NOT kill processes or start/restart the backend and frontend servers automatically.
+- The developer will manage `npm run dev` manually
+- When server restart is needed, notify the developer to restart it themselves
+- You may check process output using BashOutput tool, but do not kill or restart services
+
+### Notes
 - All project requirements, architecture decisions, and specifications are documented in the PRD
 - See `GETTING_STARTED.md` for detailed setup instructions
 - Backend API documentation follows RESTful conventions at `/api/v1/*`
 - Stripe test mode enabled - use test cards for payment testing
+- Use Stripe test card: `4242 4242 4242 4242`, any future expiry, any CVC

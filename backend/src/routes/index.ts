@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import authRoutes from './auth.routes';
 import menuRoutes from './menu.routes';
+import orderRoutes from './order.routes';
 
 const router = Router();
 
@@ -16,13 +17,12 @@ router.get('/health', (req, res) => {
 // Route modules
 router.use('/auth', authRoutes);
 router.use('/menu', menuRoutes);
+router.use('/orders', orderRoutes);
 
 // TODO: Add remaining route modules
-// import orderRoutes from './order.routes';
 // import adminRoutes from './admin.routes';
 // import paymentRoutes from './payment.routes';
 
-// router.use('/orders', orderRoutes);
 // router.use('/admin', adminRoutes);
 // router.use('/payment', paymentRoutes);
 
