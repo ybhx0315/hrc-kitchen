@@ -3,6 +3,7 @@ import authRoutes from './auth.routes';
 import menuRoutes from './menu.routes';
 import orderRoutes from './order.routes';
 import kitchenRoutes from './kitchen.routes';
+import adminRoutes from './admin.routes';
 
 const router = Router();
 
@@ -20,12 +21,10 @@ router.use('/auth', authRoutes);
 router.use('/menu', menuRoutes);
 router.use('/orders', orderRoutes);
 router.use('/kitchen', kitchenRoutes);
+router.use('/admin', adminRoutes);
 
 // TODO: Add remaining route modules
-// import adminRoutes from './admin.routes';
 // import paymentRoutes from './payment.routes';
-
-// router.use('/admin', adminRoutes);
 // router.use('/payment', paymentRoutes);
 
 export default router;

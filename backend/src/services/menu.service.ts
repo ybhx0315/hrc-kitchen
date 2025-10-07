@@ -1,6 +1,5 @@
-import { PrismaClient, Weekday } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { Weekday } from '@prisma/client';
+import prisma from '../lib/prisma';
 
 export class MenuService {
   /**

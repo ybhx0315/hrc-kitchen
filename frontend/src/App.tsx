@@ -9,6 +9,7 @@ import CheckoutPage from './pages/CheckoutPage';
 import OrderConfirmationPage from './pages/OrderConfirmationPage';
 import OrdersPage from './pages/OrdersPage';
 import KitchenDashboard from './pages/KitchenDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 
@@ -27,8 +28,7 @@ function App() {
               <Route path="/order-confirmation/:orderId" element={<OrderConfirmationPage />} />
               <Route path="/orders" element={<OrdersPage />} />
               <Route path="/kitchen" element={<KitchenDashboard />} />
-              {/* TODO: Add remaining routes */}
-              {/* <Route path="/admin" element={<AdminDashboard />} /> */}
+              <Route path="/admin" element={<AdminDashboard />} />
             </Routes>
           </Container>
         </Layout>

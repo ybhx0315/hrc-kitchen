@@ -38,6 +38,7 @@ const MenuPage: React.FC = () => {
   const [selectedCustomizations, setSelectedCustomizations] = useState<string[]>([]);
   const [specialRequests, setSpecialRequests] = useState('');
   const [cartOpen, setCartOpen] = useState(false);
+  const [orderingWindow, setOrderingWindow] = useState<any>(null);
 
   const { addItem, getCartItemCount } = useCart();
 
@@ -53,6 +54,7 @@ const MenuPage: React.FC = () => {
       if (response.success) {
         setMenuItems(response.data.items);
         setWeekday(response.data.weekday);
+        setOrderingWindow(response.data.orderingWindow);
 
         if (response.message) {
           setError(response.message);
@@ -150,6 +152,17 @@ const MenuPage: React.FC = () => {
       {error && (
         <Alert severity="warning" sx={{ mb: 3 }}>
           {error}
+        </Alert>
+      )}
+
+      {orderingWindow && !orderingWindow.active && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {orderingWindow.message || 'Ordering is currently closed'}
+          {orderingWindow.window.start && orderingWindow.window.end && (
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              Ordering window: {orderingWindow.window.start} - {orderingWindow.window.end}
+            </Typography>
+          )}
         </Alert>
       )}
 

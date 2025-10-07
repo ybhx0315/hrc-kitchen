@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import menuService from '../services/menu.service';
+import configService from '../services/config.service';
 
 export class MenuController {
   /**
@@ -9,6 +10,7 @@ export class MenuController {
   async getTodaysMenu(req: Request, res: Response) {
     try {
       const result = await menuService.getTodaysMenu();
+      const orderingWindow = await configService.isOrderingWindowActive();
 
       if (result.items.length === 0) {
         return res.status(200).json({
@@ -16,6 +18,7 @@ export class MenuController {
           data: {
             items: [],
             weekday: result.weekday,
+            orderingWindow,
           },
           message: result.message,
         });
@@ -26,6 +29,7 @@ export class MenuController {
         data: {
           items: result.items,
           weekday: result.weekday,
+          orderingWindow,
         },
       });
     } catch (error) {

@@ -1,9 +1,7 @@
-import { PrismaClient } from '@prisma/client';
 import { CreateOrderDto, OrderWithDetails } from '../types/order.types';
 import { PaymentService } from './payment.service';
 import { ConfigService } from './config.service';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 export class OrderService {
   private configService: ConfigService;

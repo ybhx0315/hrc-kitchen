@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -107,6 +107,9 @@ const KitchenDashboard = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+  const [flashingCards, setFlashingCards] = useState<Record<string, boolean>>({});
+  const [flashingRows, setFlashingRows] = useState<Record<string, boolean>>({});
+  const cardPositions = useRef<Record<string, { top: number; height: number }>>({});
 
   useEffect(() => {
     loadData();
@@ -180,6 +183,14 @@ const KitchenDashboard = () => {
 
   const handleItemStatusChange = async (orderItemId: string, newStatus: string) => {
     try {
+      // Trigger flash effect on the specific row
+      setFlashingRows(prev => ({ ...prev, [orderItemId]: true }));
+
+      // Remove flash effect after animation completes
+      setTimeout(() => {
+        setFlashingRows(prev => ({ ...prev, [orderItemId]: false }));
+      }, 600);
+
       await api.patch(`/kitchen/order-items/${orderItemId}/status`, { status: newStatus });
 
       // Update state locally instead of reloading
@@ -257,6 +268,9 @@ const KitchenDashboard = () => {
 
   const handleBatchFulfillment = async (menuItemId: string) => {
     try {
+      // Trigger flash effect
+      setFlashingCards(prev => ({ ...prev, [menuItemId]: true }));
+
       // Find all order items for this menu item that are not fulfilled
       const orderItemsToFulfill: string[] = [];
 
@@ -309,9 +323,16 @@ const KitchenDashboard = () => {
           };
         })
       );
+
+      // Remove flash effect after animation completes
+      setTimeout(() => {
+        setFlashingCards(prev => ({ ...prev, [menuItemId]: false }));
+      }, 600);
     } catch (err: any) {
       console.error('Error batch fulfilling items:', err);
       setError(err.response?.data?.message || 'Failed to batch fulfill items');
+      // Remove flash effect on error too
+      setFlashingCards(prev => ({ ...prev, [menuItemId]: false }));
     }
   };
 
@@ -437,8 +458,8 @@ const KitchenDashboard = () => {
       {/* Tabs for different views */}
       <Paper sx={{ mb: 3 }}>
         <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
+          <Tab label="Group by Item" />
           <Tab label="Order List" />
-          <Tab label="Batch View" />
         </Tabs>
       </Paper>
 
@@ -448,124 +469,8 @@ const KitchenDashboard = () => {
         </Box>
       ) : (
         <>
-          {/* Order List View */}
+          {/* Group by Item View */}
           {tabValue === 0 && (
-            <Box>
-              {orders.length === 0 ? (
-                <Alert severity="info">No orders found for the selected date and filters.</Alert>
-              ) : (
-                <Grid container spacing={2}>
-                  {orders.map((order) => (
-                    <Grid item xs={12} key={order.id}>
-                      <Card>
-                        <CardContent>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                            <Box>
-                              <Typography variant="h6">{order.orderNumber}</Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                {order.user.fullName} ({order.user.email})
-                              </Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                {new Date(order.createdAt).toLocaleTimeString()}
-                              </Typography>
-                            </Box>
-                            <Box sx={{ textAlign: 'right' }}>
-                              <Typography variant="h6" color="primary">
-                                ${Number(order.totalAmount).toFixed(2)}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                                {order.fulfillmentStatus === 'FULFILLED'
-                                  ? 'All items fulfilled'
-                                  : order.fulfillmentStatus === 'PARTIALLY_FULFILLED'
-                                  ? 'In progress'
-                                  : 'Pending'}
-                              </Typography>
-                            </Box>
-                          </Box>
-
-                          <Divider sx={{ my: 2 }} />
-
-                          {/* Order items */}
-                          <Stack spacing={2} sx={{ mb: 2 }}>
-                            {order.orderItems.map((item) => (
-                              <Box key={item.id} sx={{
-                                p: 1.5,
-                                border: '1px solid #e0e0e0',
-                                borderRadius: 1,
-                                backgroundColor: item.fulfillmentStatus === 'FULFILLED' ? '#f1f8f4' : 'transparent'
-                              }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                                  <Box sx={{ flex: 1 }}>
-                                    <Typography variant="body1">
-                                      <strong>{item.quantity}x</strong> {item.menuItem.name}
-                                    </Typography>
-                                    {item.customizations && (
-                                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                                        {item.customizations.customizations &&
-                                          `Customizations: ${item.customizations.customizations.join(', ')}`}
-                                        {item.customizations.specialRequests &&
-                                          ` | Special: ${item.customizations.specialRequests}`}
-                                      </Typography>
-                                    )}
-                                  </Box>
-                                  {item.fulfillmentStatus === 'FULFILLED' ? (
-                                    <Chip
-                                      icon={<CheckCircleIcon />}
-                                      label="FULFILLED"
-                                      color="success"
-                                      size="small"
-                                      variant="outlined"
-                                      sx={{ ml: 2 }}
-                                    />
-                                  ) : (
-                                    <Button
-                                      variant="contained"
-                                      size="small"
-                                      color="success"
-                                      startIcon={<CheckCircleIcon />}
-                                      onClick={() => handleItemStatusChange(item.id, 'FULFILLED')}
-                                      sx={{ ml: 2, flexShrink: 0 }}
-                                    >
-                                      Mark Fulfilled
-                                    </Button>
-                                  )}
-                                </Box>
-                              </Box>
-                            ))}
-                          </Stack>
-
-                          {order.specialRequests && (
-                            <Alert severity="info" sx={{ mb: 2 }}>
-                              <strong>Special Requests:</strong> {order.specialRequests}
-                            </Alert>
-                          )}
-
-                          {/* Quick action: Mark all items as fulfilled */}
-                          {order.fulfillmentStatus !== 'FULFILLED' &&
-                           order.orderItems.some(item => item.fulfillmentStatus === 'PLACED') && (
-                            <Box sx={{ mt: 2, pt: 2, borderTop: '1px dashed #e0e0e0' }}>
-                              <Button
-                                variant="outlined"
-                                size="small"
-                                color="success"
-                                startIcon={<CheckCircleIcon />}
-                                onClick={() => handleStatusChange(order.id, 'FULFILLED')}
-                              >
-                                Mark All Items as Fulfilled
-                              </Button>
-                            </Box>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
-              )}
-            </Box>
-          )}
-
-          {/* Batch View */}
-          {tabValue === 1 && (
             <Box>
               {(() => {
                 // Filter summary based on status filter
@@ -620,12 +525,45 @@ const KitchenDashboard = () => {
                 });
 
                 return sortedSummary.length === 0 ? (
-                  <Alert severity="info">No orders found for batch preparation.</Alert>
+                  <Alert severity="info">No orders found.</Alert>
                 ) : (
-                  <Grid container spacing={2}>
-                    {sortedSummary.map((item) => (
-                    <Grid item xs={12} key={item.menuItem.id}>
-                      <Card>
+                  <Grid container spacing={2} sx={{ position: 'relative' }}>
+                    {sortedSummary.map((item, itemIndex) => {
+                      // Calculate fulfillment to determine order
+                      const fulfilledCount = orders.reduce((count, order) => {
+                        return count + order.orderItems.filter(
+                          oi => oi.menuItem.id === item.menuItem.id && oi.fulfillmentStatus === 'FULFILLED'
+                        ).length;
+                      }, 0);
+                      const totalCount = orders.reduce((count, order) => {
+                        return count + order.orderItems.filter(
+                          oi => oi.menuItem.id === item.menuItem.id
+                        ).length;
+                      }, 0);
+                      const isFullyFulfilled = fulfilledCount === totalCount;
+
+                      return (
+                    <Grid
+                      item
+                      xs={12}
+                      key={item.menuItem.id}
+                      sx={{
+                        transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+                        transform: flashingCards[item.menuItem.id] ? 'scale(1.02)' : 'scale(1)',
+                        order: isFullyFulfilled ? 1000 + itemIndex : itemIndex,
+                      }}
+                    >
+                      <Card
+                        sx={{
+                          transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+                          backgroundColor: flashingCards[item.menuItem.id]
+                            ? 'rgba(76, 175, 80, 0.15)'
+                            : 'white',
+                          boxShadow: flashingCards[item.menuItem.id]
+                            ? '0 4px 20px rgba(76, 175, 80, 0.4)'
+                            : undefined,
+                        }}
+                      >
                         <CardContent>
                           {(() => {
                             // Calculate fulfillment progress
@@ -759,10 +697,20 @@ const KitchenDashboard = () => {
                                     alignItems: 'center',
                                     py: 1.5,
                                     px: 2,
-                                    backgroundColor: index % 2 === 0 ? 'transparent' : 'rgba(0, 0, 0, 0.02)',
-                                    transition: 'background-color 0.2s',
+                                    backgroundColor: flashingRows[orderItem?.id || '']
+                                      ? 'rgba(76, 175, 80, 0.2)'
+                                      : index % 2 === 0
+                                      ? 'transparent'
+                                      : 'rgba(0, 0, 0, 0.02)',
+                                    transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    transform: flashingRows[orderItem?.id || ''] ? 'scale(1.01)' : 'scale(1)',
+                                    boxShadow: flashingRows[orderItem?.id || '']
+                                      ? '0 2px 10px rgba(76, 175, 80, 0.3)'
+                                      : 'none',
                                     '&:hover': {
-                                      backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                                      backgroundColor: flashingRows[orderItem?.id || '']
+                                        ? 'rgba(76, 175, 80, 0.2)'
+                                        : 'rgba(0, 0, 0, 0.04)'
                                     }
                                   }}
                                 >
@@ -809,10 +757,127 @@ const KitchenDashboard = () => {
                         </CardContent>
                       </Card>
                     </Grid>
-                  ))}
-                </Grid>
+                      );
+                    })}
+                  </Grid>
                 );
               })()}
+            </Box>
+          )}
+
+          {/* Order List View */}
+          {tabValue === 1 && (
+            <Box>
+              {orders.length === 0 ? (
+                <Alert severity="info">No orders found for the selected date and filters.</Alert>
+              ) : (
+                <Grid container spacing={2}>
+                  {orders.map((order) => (
+                    <Grid item xs={12} key={order.id}>
+                      <Card>
+                        <CardContent>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                            <Box>
+                              <Typography variant="h6">{order.orderNumber}</Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {order.user.fullName} ({order.user.email})
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {new Date(order.createdAt).toLocaleTimeString()}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ textAlign: 'right' }}>
+                              <Typography variant="h6" color="primary">
+                                ${Number(order.totalAmount).toFixed(2)}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                                {order.fulfillmentStatus === 'FULFILLED'
+                                  ? 'All items fulfilled'
+                                  : order.fulfillmentStatus === 'PARTIALLY_FULFILLED'
+                                  ? 'In progress'
+                                  : 'Pending'}
+                              </Typography>
+                            </Box>
+                          </Box>
+
+                          <Divider sx={{ my: 2 }} />
+
+                          {/* Order items */}
+                          <Stack spacing={2} sx={{ mb: 2 }}>
+                            {order.orderItems.map((item) => (
+                              <Box key={item.id} sx={{
+                                p: 1.5,
+                                border: '1px solid #e0e0e0',
+                                borderRadius: 1,
+                                backgroundColor: item.fulfillmentStatus === 'FULFILLED' ? '#f1f8f4' : 'transparent'
+                              }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                                  <Box sx={{ flex: 1 }}>
+                                    <Typography variant="body1">
+                                      <strong>{item.quantity}x</strong> {item.menuItem.name}
+                                    </Typography>
+                                    {item.customizations && (
+                                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                                        {item.customizations.customizations &&
+                                          `Customizations: ${item.customizations.customizations.join(', ')}`}
+                                        {item.customizations.specialRequests &&
+                                          ` | Special: ${item.customizations.specialRequests}`}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                  {item.fulfillmentStatus === 'FULFILLED' ? (
+                                    <Chip
+                                      icon={<CheckCircleIcon />}
+                                      label="FULFILLED"
+                                      color="success"
+                                      size="small"
+                                      variant="outlined"
+                                      sx={{ ml: 2 }}
+                                    />
+                                  ) : (
+                                    <Button
+                                      variant="contained"
+                                      size="small"
+                                      color="success"
+                                      startIcon={<CheckCircleIcon />}
+                                      onClick={() => handleItemStatusChange(item.id, 'FULFILLED')}
+                                      sx={{ ml: 2, flexShrink: 0 }}
+                                    >
+                                      Mark Fulfilled
+                                    </Button>
+                                  )}
+                                </Box>
+                              </Box>
+                            ))}
+                          </Stack>
+
+                          {order.specialRequests && (
+                            <Alert severity="info" sx={{ mb: 2 }}>
+                              <strong>Special Requests:</strong> {order.specialRequests}
+                            </Alert>
+                          )}
+
+                          {/* Quick action: Mark all items as fulfilled */}
+                          {order.fulfillmentStatus !== 'FULFILLED' &&
+                           order.orderItems.some(item => item.fulfillmentStatus === 'PLACED') && (
+                            <Box sx={{ mt: 2, pt: 2, borderTop: '1px dashed #e0e0e0' }}>
+                              <Button
+                                variant="outlined"
+                                size="small"
+                                color="success"
+                                startIcon={<CheckCircleIcon />}
+                                onClick={() => handleStatusChange(order.id, 'FULFILLED')}
+                              >
+                                Mark All Items as Fulfilled
+                              </Button>
+                            </Box>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              )}
             </Box>
           )}
         </>

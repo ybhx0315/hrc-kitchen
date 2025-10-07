@@ -1,6 +1,5 @@
-import { PrismaClient, OrderStatus } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { OrderStatus } from '@prisma/client';
+import prisma from '../lib/prisma';
 
 export interface KitchenOrderFilters {
   date?: string; // ISO date string
