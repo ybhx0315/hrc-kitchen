@@ -19,7 +19,7 @@ HRC Kitchen is a web-based lunch ordering system for Huon Regional Care staff, f
 - Non-technical menu management interface
 
 ## Development Status
-- **Current Phase**: Phase 2 Complete - Core User Flow Functional
+- **Current Phase**: Phase 3 Complete - Kitchen Dashboard Functional
 - **Completed**:
   - ✅ Project structure and monorepo setup
   - ✅ Backend API foundation (Node.js/Express/TypeScript)
@@ -46,13 +46,22 @@ HRC Kitchen is a web-based lunch ordering system for Huon Regional Care staff, f
     - Order confirmation page with order details
     - Orders history page listing all user orders
     - End-to-end tested: Menu → Cart → Checkout → Payment → Confirmation → Order History
+  - ✅ **Phase 3 Complete**: Kitchen Dashboard for order management
+    - Kitchen API endpoints (`/api/v1/kitchen/*`)
+    - Item-level fulfillment tracking with automatic order status calculation
+    - Two-view system: Order List view and Batch View
+    - Batch fulfillment functionality
+    - Collapsible fulfilled items
+    - Real-time status updates without page refresh
+    - Role-based access control (KITCHEN/ADMIN only)
+    - Daily statistics and filtering
 
 - **Next Steps**:
-  1. Kitchen dashboard for order management and fulfillment
-  2. Admin panel for menu management
-  3. Admin panel for system configuration
-  4. Order status updates and notifications
-  5. Enhanced error handling and user feedback
+  1. Admin panel for menu management
+  2. Admin panel for system configuration
+  3. Email notifications for order status updates
+  4. Print functionality for kitchen tickets
+  5. Enhanced reporting and analytics
 
 ## Technical Setup
 
@@ -82,6 +91,14 @@ npm run dev  # Starts both backend (port 3000) and frontend (port 5173)
   - Generates unique order numbers (format: ORD-YYYYMMDD-####)
   - Stores customizations and special requests as JSON
 
+- **Kitchen Service** (`backend/src/services/kitchen.service.ts`):
+  - `getOrders()` - Fetch orders with filters (date, status, menu item)
+  - `getOrderSummary()` - Group orders by menu item for batch preparation
+  - `updateOrderStatus()` - Update entire order fulfillment status
+  - `updateOrderItemStatus()` - Update individual item status with auto-calculation
+  - `getDailyStats()` - Calculate daily statistics
+  - Automatic order status calculation: PLACED → PARTIALLY_FULFILLED → FULFILLED
+
 - **Payment Integration**:
   - Static PaymentService methods for Stripe operations
   - Payment intents created before order confirmation
@@ -94,11 +111,24 @@ npm run dev  # Starts both backend (port 3000) and frontend (port 5173)
   - `/checkout` - Stripe Elements payment form
   - `/order-confirmation/:orderId` - Order success page
   - `/orders` - Order history with status tracking
+  - `/kitchen` - Kitchen dashboard (KITCHEN/ADMIN only)
+
+- **Kitchen Dashboard Features**:
+  - **Order List View**: Individual orders with full details and item-level fulfillment
+  - **Batch View**: Orders grouped by menu item for efficient batch preparation
+  - Date picker for viewing any date's orders
+  - Status filtering (All, PLACED, PARTIALLY_FULFILLED, FULFILLED)
+  - Collapsible fulfilled item cards
+  - Smart sorting (unfulfilled items first, both at card and row level)
+  - Local state updates for instant UI feedback
+  - Batch fulfillment: Mark all items of a menu type as fulfilled
+  - Daily statistics: Total orders, revenue, pending count
 
 - **State Management**:
   - CartContext with localStorage persistence
   - AuthContext with JWT token management
   - React Router for navigation
+  - Local component state for kitchen dashboard collapse/expand
 
 ### Data Flow
 1. User browses menu and adds items to cart (with customizations)

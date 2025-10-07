@@ -17,8 +17,8 @@ enum UserRole {
 
 enum OrderStatus {
   PLACED
-  PREPARING
-  READY
+  PARTIALLY_FULFILLED
+  FULFILLED
 }
 
 enum PaymentStatus {
@@ -123,20 +123,22 @@ model Order {
 }
 
 model OrderItem {
-  id                String   @id @default(uuid())
-  orderId           String   @map("order_id")
-  menuItemId        String   @map("menu_item_id")
-  quantity          Int      @default(1)
-  customizations    Json?    @db.JsonB
-  priceAtPurchase   Decimal  @db.Decimal(10, 2) @map("price_at_purchase")
-  createdAt         DateTime @default(now()) @map("created_at")
+  id                String      @id @default(uuid())
+  orderId           String      @map("order_id")
+  menuItemId        String      @map("menu_item_id")
+  quantity          Int         @default(1)
+  customizations    Json?       @db.JsonB
+  priceAtPurchase   Decimal     @db.Decimal(10, 2) @map("price_at_purchase")
+  fulfillmentStatus OrderStatus @default(PLACED) @map("fulfillment_status")
+  createdAt         DateTime    @default(now()) @map("created_at")
 
   // Relations
-  order             Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  menuItem          MenuItem @relation(fields: [menuItemId], references: [id])
+  order             Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem          MenuItem    @relation(fields: [menuItemId], references: [id])
 
   @@index([orderId])
   @@index([menuItemId])
+  @@index([fulfillmentStatus])
   @@map("order_items")
 }
 

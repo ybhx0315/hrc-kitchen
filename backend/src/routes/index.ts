@@ -2,6 +2,7 @@ import { Router } from 'express';
 import authRoutes from './auth.routes';
 import menuRoutes from './menu.routes';
 import orderRoutes from './order.routes';
+import kitchenRoutes from './kitchen.routes';
 
 const router = Router();
 
@@ -18,6 +19,7 @@ router.get('/health', (req, res) => {
 router.use('/auth', authRoutes);
 router.use('/menu', menuRoutes);
 router.use('/orders', orderRoutes);
+router.use('/kitchen', kitchenRoutes);
 
 // TODO: Add remaining route modules
 // import adminRoutes from './admin.routes';
