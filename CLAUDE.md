@@ -69,6 +69,17 @@ HRC Kitchen is a web-based lunch ordering system for Huon Regional Care staff, f
     - Customization management for menu items
     - Image upload with Cloudinary integration
     - Automatic client-side image compression before upload
+    - **Product Variations System**:
+      - Variation groups (e.g., Size, Protein Choice, Add-ons)
+      - Single-select (radio) and multi-select (checkbox) options
+      - Price modifiers for each option (positive/negative/zero)
+      - Default option selection support (one default per group)
+      - Required/optional group configuration
+      - Inline editing for groups and options (no modal dialogs)
+      - Real-time state updates without page refreshes
+      - Customer-facing variation selector with dynamic pricing
+      - Kitchen dashboard displays selected variations
+      - Order system stores and processes variation selections
     - User management (view, search, filter users)
     - Role management (promote/demote users with self-protection)
     - User activation/deactivation with self-protection
@@ -132,6 +143,12 @@ npm run dev  # Starts both backend (port 3000) and frontend (port 5173)
   - `deleteMenuItem()` - Soft delete (deactivate) or permanently delete menu items
   - `addCustomization()` - Add customization options to menu items
   - `deleteCustomization()` - Remove customization options
+  - `createVariationGroup()` - Create variation groups for menu items
+  - `updateVariationGroup()` - Update variation group settings
+  - `deleteVariationGroup()` - Delete variation groups
+  - `createVariationOption()` - Add options to variation groups with price modifiers
+  - `updateVariationOption()` - Update variation options
+  - `deleteVariationOption()` - Remove variation options
   - `getUsers()` - Fetch users with pagination, search, and filtering
   - `updateUserRole()` - Promote/demote user roles with self-protection
   - `updateUserStatus()` - Activate/deactivate users with self-protection
@@ -192,6 +209,16 @@ npm run dev  # Starts both backend (port 3000) and frontend (port 5173)
     - Active/inactive toggle for menu items
     - Visual card-based layout with images
     - Contextual chips showing weekday/category based on view mode
+    - **Variation Management**:
+      - Inline group creation/editing (no modal dialogs)
+      - Inline option creation/editing within groups
+      - All groups always visible (no expand/collapse)
+      - Real-time state updates without page refreshes
+      - Single/Multi-select type configuration
+      - Required/optional group settings
+      - Price modifier support with automatic formatting
+      - Default option enforcement (one per group)
+      - Drag indicators for future reordering support
   - **User Management Tab**:
     - Searchable and filterable user table
     - Role-based filtering (Staff, Kitchen, Admin)
@@ -215,12 +242,14 @@ npm run dev  # Starts both backend (port 3000) and frontend (port 5173)
   - Local component state for kitchen dashboard collapse/expand
 
 ### Data Flow
-1. User browses menu and adds items to cart (with customizations)
-2. Cart persisted to localStorage
-3. Checkout creates order and Stripe PaymentIntent
-4. User enters card details via Stripe Elements
-5. Payment confirmed → Order status updated → Redirect to confirmation
-6. User can view order history and details
+1. User browses menu and adds items to cart (with customizations and variations)
+2. Variation selector shows available options with dynamic price calculation
+3. Cart persisted to localStorage with selected variations
+4. Checkout creates order and Stripe PaymentIntent with variation data
+5. User enters card details via Stripe Elements
+6. Payment confirmed → Order status updated → Redirect to confirmation
+7. Kitchen dashboard displays orders with variation selections as chips
+8. User can view order history and details with variations
 
 ## Development Guidelines
 

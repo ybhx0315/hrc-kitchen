@@ -1,8 +1,11 @@
+import { VariationSelection } from './variation.types';
+
 export interface CreateOrderItemDto {
   menuItemId: string;
   quantity: number;
-  customizations?: string;
+  customizations?: string;  // Legacy: old free-text customizations
   specialRequests?: string;
+  selectedVariations?: VariationSelection[];  // New: structured variations
 }
 
 export interface CreateOrderDto {

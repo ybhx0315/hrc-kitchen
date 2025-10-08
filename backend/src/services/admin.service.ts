@@ -1,5 +1,11 @@
-import { Weekday, Category, UserRole } from '@prisma/client';
+import { Weekday, Category, UserRole, VariationGroupType } from '@prisma/client';
 import prisma from '../lib/prisma';
+import {
+  CreateVariationGroupInput,
+  UpdateVariationGroupInput,
+  CreateVariationOptionInput,
+  UpdateVariationOptionInput,
+} from '../types/variation.types';
 
 interface CreateMenuItemData {
   name: string;
@@ -266,6 +272,143 @@ export class AdminService {
 
     // Return updated config
     return this.getConfig();
+  }
+
+  // ==================== VARIATION GROUP OPERATIONS ====================
+
+  /**
+   * Create a variation group for a menu item
+   */
+  async createVariationGroup(data: CreateVariationGroupInput) {
+    const group = await prisma.variationGroup.create({
+      data: {
+        menuItemId: data.menuItemId,
+        name: data.name,
+        type: data.type,
+        required: data.required ?? false,
+        displayOrder: data.displayOrder ?? 0,
+      },
+      include: {
+        options: {
+          orderBy: { displayOrder: 'asc' },
+        },
+      },
+    });
+
+    return group;
+  }
+
+  /**
+   * Update a variation group
+   */
+  async updateVariationGroup(groupId: string, data: UpdateVariationGroupInput) {
+    try {
+      const group = await prisma.variationGroup.update({
+        where: { id: groupId },
+        data: {
+          ...(data.name !== undefined && { name: data.name }),
+          ...(data.type !== undefined && { type: data.type }),
+          ...(data.required !== undefined && { required: data.required }),
+          ...(data.displayOrder !== undefined && { displayOrder: data.displayOrder }),
+        },
+        include: {
+          options: {
+            orderBy: { displayOrder: 'asc' },
+          },
+        },
+      });
+
+      return group;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Delete a variation group (cascade deletes options)
+   */
+  async deleteVariationGroup(groupId: string) {
+    await prisma.variationGroup.delete({
+      where: { id: groupId },
+    });
+  }
+
+  /**
+   * Get all variation groups for a menu item
+   */
+  async getVariationGroups(menuItemId: string) {
+    const groups = await prisma.variationGroup.findMany({
+      where: { menuItemId },
+      include: {
+        options: {
+          orderBy: { displayOrder: 'asc' },
+        },
+      },
+      orderBy: { displayOrder: 'asc' },
+    });
+
+    return groups;
+  }
+
+  // ==================== VARIATION OPTION OPERATIONS ====================
+
+  /**
+   * Create a variation option
+   */
+  async createVariationOption(data: CreateVariationOptionInput) {
+    const option = await prisma.variationOption.create({
+      data: {
+        variationGroupId: data.variationGroupId,
+        name: data.name,
+        priceModifier: data.priceModifier ?? 0,
+        isDefault: data.isDefault ?? false,
+        displayOrder: data.displayOrder ?? 0,
+      },
+    });
+
+    return option;
+  }
+
+  /**
+   * Update a variation option
+   */
+  async updateVariationOption(optionId: string, data: UpdateVariationOptionInput) {
+    try {
+      const option = await prisma.variationOption.update({
+        where: { id: optionId },
+        data: {
+          ...(data.name !== undefined && { name: data.name }),
+          ...(data.priceModifier !== undefined && { priceModifier: data.priceModifier }),
+          ...(data.isDefault !== undefined && { isDefault: data.isDefault }),
+          ...(data.displayOrder !== undefined && { displayOrder: data.displayOrder }),
+        },
+      });
+
+      return option;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Delete a variation option
+   */
+  async deleteVariationOption(optionId: string) {
+    await prisma.variationOption.delete({
+      where: { id: optionId },
+    });
+  }
+
+  /**
+   * Get all options for a variation group
+   */
+  async getVariationOptions(groupId: string) {
+    const options = await prisma.variationOption.findMany({
+      where: { variationGroupId: groupId },
+      orderBy: { displayOrder: 'asc' },
+    });
+
+    return options;
   }
 }
 

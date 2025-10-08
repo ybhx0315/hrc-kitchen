@@ -168,7 +168,42 @@ HRC Kitchen is a web-based lunch ordering system designed for Huon Regional Care
 - FR-4.4: Multiple customizations allowed per item
 - FR-4.5: Customizations displayed to kitchen staff with orders
 
-#### 4.2.3 Admin Menu Editor
+#### 4.2.3 Product Variations System
+**Priority**: P0 (Must Have)
+**Status**: ✅ Implemented
+
+**Overview**:
+Product variations enable menu items to have structured options with price modifiers, such as different sizes, protein choices, or add-ons. This differs from customizations (which are free-form modifications) by providing predefined, priced options that affect the total cost.
+
+**Requirements**:
+- FR-4.10: Menu items can have variation groups (e.g., "Size", "Protein Choice", "Add-ons")
+- FR-4.11: Each variation group has a type:
+  - Single-select (radio buttons): Customer chooses exactly one option
+  - Multi-select (checkboxes): Customer can choose multiple options
+- FR-4.12: Each variation group can be marked as required or optional
+- FR-4.13: Variation options include:
+  - Name (e.g., "Large", "Grilled Chicken", "Extra Cheese")
+  - Price modifier (positive, negative, or zero)
+  - Default selection flag (one per group)
+- FR-4.14: Price modifiers automatically update cart total
+- FR-4.15: Selected variations displayed in cart, checkout, order confirmation, and kitchen dashboard
+- FR-4.16: Admin interface supports inline creation/editing of variation groups and options
+- FR-4.17: Validation enforces one default option per group
+- FR-4.18: Variations stored with order for historical accuracy
+
+**User Experience**:
+- Staff see variation selector when adding items to cart
+- Dynamic price calculation shows impact of selections
+- Selected variations displayed as chips with pricing
+- Kitchen staff see all variation selections on orders
+- Admin can create/edit variations without modal dialogs (inline editing)
+
+**Database Schema**:
+- `variation_groups`: Stores group definitions (name, type, required, display_order)
+- `variation_options`: Stores individual options (name, price_modifier, is_default, display_order)
+- `order_items.selected_variations`: JSON storage of customer selections
+
+#### 4.2.4 Admin Menu Editor
 **Priority**: P0 (Must Have)
 
 **Requirements**:
@@ -487,6 +522,18 @@ is_active, created_at, updated_at
 id, menu_item_id, customization_name, created_at
 ```
 
+#### VariationGroups
+```
+id, menu_item_id, name, type (SINGLE_SELECT/MULTI_SELECT), required, display_order,
+created_at, updated_at
+```
+
+#### VariationOptions
+```
+id, variation_group_id, name, price_modifier, is_default, display_order,
+created_at, updated_at
+```
+
 #### Orders
 ```
 id, user_id, order_number, total_amount, payment_status, payment_id, fulfillment_status,
@@ -495,7 +542,8 @@ special_requests, order_date, created_at, updated_at
 
 #### OrderItems
 ```
-id, order_id, menu_item_id, quantity, customizations (JSON), price_at_purchase, created_at
+id, order_id, menu_item_id, quantity, customizations (JSON), selected_variations (JSON),
+price_at_purchase, fulfillment_status, created_at
 ```
 
 #### SystemConfig

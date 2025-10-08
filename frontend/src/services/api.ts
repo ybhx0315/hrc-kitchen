@@ -39,6 +39,31 @@ api.interceptors.response.use(
 );
 
 // Types
+export type VariationGroupType = 'SINGLE_SELECT' | 'MULTI_SELECT';
+
+export interface VariationOption {
+  id: string;
+  variationGroupId: string;
+  name: string;
+  priceModifier: number;
+  isDefault: boolean;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VariationGroup {
+  id: string;
+  menuItemId: string;
+  name: string;
+  type: VariationGroupType;
+  required: boolean;
+  displayOrder: number;
+  options: VariationOption[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface MenuItem {
   id: string;
   name: string;
@@ -50,12 +75,26 @@ export interface MenuItem {
   dietaryTags: string[];
   isActive: boolean;
   customizations: MenuItemCustomization[];
+  variationGroups?: VariationGroup[];
 }
 
 export interface MenuItemCustomization {
   id: string;
   menuItemId: string;
   customizationName: string;
+}
+
+export interface VariationSelection {
+  groupId: string;
+  optionIds: string[];
+}
+
+export interface SelectedVariation {
+  groupId: string;
+  groupName: string;
+  optionId: string;
+  optionName: string;
+  priceModifier: number;
 }
 
 export interface TodaysMenuResponse {

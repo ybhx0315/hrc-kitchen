@@ -23,7 +23,7 @@ import axios from 'axios';
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
 
 const CheckoutForm: React.FC = () => {
-  const { items, clearCart, getCartTotal } = useCart();
+  const { items, clearCart, getCartTotal, calculateItemPrice } = useCart();
   const { token } = useAuth();
   const navigate = useNavigate();
   const stripe = useStripe();
@@ -53,6 +53,7 @@ const CheckoutForm: React.FC = () => {
           quantity: item.quantity,
           customizations: item.customizations.join(', '),
           specialRequests: item.specialRequests,
+          selectedVariations: item.selectedVariations || [],
         })),
         deliveryNotes: deliveryNotes || undefined,
       };
@@ -122,25 +123,56 @@ const CheckoutForm: React.FC = () => {
 
         <List>
           {items.map(item => (
-            <ListItem key={item.menuItem.id} sx={{ px: 0 }}>
-              <ListItemText
-                primary={`${item.menuItem.name} × ${item.quantity}`}
-                secondary={
-                  <>
-                    {item.customizations.length > 0 && (
-                      <Typography variant="body2" color="text.secondary">
-                        Customizations: {item.customizations.join(', ')}
-                      </Typography>
-                    )}
-                    {item.specialRequests && (
-                      <Typography variant="body2" color="text.secondary">
-                        Special Requests: {item.specialRequests}
-                      </Typography>
-                    )}
-                  </>
-                }
-              />
-              <Typography variant="body1">${(Number(item.menuItem.price) * item.quantity).toFixed(2)}</Typography>
+            <ListItem key={item.menuItem.id} sx={{ px: 0, flexDirection: 'column', alignItems: 'flex-start' }}>
+              <Box sx={{ width: '100%', display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body1" fontWeight="bold">
+                  {item.menuItem.name} × {item.quantity}
+                </Typography>
+                <Typography variant="body1" fontWeight="bold">
+                  ${(calculateItemPrice(item) * item.quantity).toFixed(2)}
+                </Typography>
+              </Box>
+
+              <Box sx={{ width: '100%', pl: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  ${calculateItemPrice(item).toFixed(2)} each
+                </Typography>
+
+                {/* Display selected variations */}
+                {item.selectedVariations && item.selectedVariations.length > 0 && (
+                  <Box sx={{ mt: 1 }}>
+                    {item.selectedVariations.map((selection) => {
+                      const group = item.menuItem.variationGroups?.find(
+                        (g) => g.id === selection.groupId
+                      );
+                      if (!group) return null;
+
+                      const selectedOptions = selection.optionIds
+                        .map((optionId) => group.options.find((o) => o.id === optionId))
+                        .filter(Boolean);
+
+                      return (
+                        <Typography key={selection.groupId} variant="body2" color="text.secondary">
+                          • {group.name}: {selectedOptions.map((opt) =>
+                            `${opt!.name}${opt!.priceModifier !== 0 ? ` (+$${Number(opt!.priceModifier).toFixed(2)})` : ''}`
+                          ).join(', ')}
+                        </Typography>
+                      );
+                    })}
+                  </Box>
+                )}
+
+                {item.customizations.length > 0 && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                    • Customizations: {item.customizations.join(', ')}
+                  </Typography>
+                )}
+                {item.specialRequests && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                    • Special Requests: {item.specialRequests}
+                  </Typography>
+                )}
+              </Box>
             </ListItem>
           ))}
         </List>

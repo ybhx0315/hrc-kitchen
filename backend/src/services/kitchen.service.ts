@@ -19,8 +19,8 @@ export class KitchenService {
 
     // Filter by date (default to today)
     if (date) {
-      const orderDate = new Date(date);
-      orderDate.setHours(0, 0, 0, 0);
+      // Parse date as local timezone by appending time
+      const orderDate = new Date(date + 'T00:00:00');
       where.orderDate = orderDate;
     } else {
       // Default to today
@@ -79,8 +79,14 @@ export class KitchenService {
    */
   async getOrderSummary(date?: string) {
     // Build where clause for date
-    const orderDate = date ? new Date(date) : new Date();
-    orderDate.setHours(0, 0, 0, 0);
+    let orderDate: Date;
+    if (date) {
+      // Parse date as local timezone by appending time
+      orderDate = new Date(date + 'T00:00:00');
+    } else {
+      orderDate = new Date();
+      orderDate.setHours(0, 0, 0, 0);
+    }
 
     const orders = await prisma.order.findMany({
       where: {
@@ -134,6 +140,7 @@ export class KitchenService {
           orderNumber: order.orderNumber,
           quantity: item.quantity,
           customizations: item.customizations,
+          selectedVariations: item.selectedVariations,
           customerName: order.user.fullName,
           fulfillmentStatus: order.fulfillmentStatus
         });
@@ -304,8 +311,14 @@ export class KitchenService {
    * Get daily statistics for kitchen dashboard
    */
   async getDailyStats(date?: string) {
-    const orderDate = date ? new Date(date) : new Date();
-    orderDate.setHours(0, 0, 0, 0);
+    let orderDate: Date;
+    if (date) {
+      // Parse date as local timezone by appending time
+      orderDate = new Date(date + 'T00:00:00');
+    } else {
+      orderDate = new Date();
+      orderDate.setHours(0, 0, 0, 0);
+    }
 
     const orders = await prisma.order.findMany({
       where: {

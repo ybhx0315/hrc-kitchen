@@ -40,6 +40,15 @@ export class MenuService {
       },
       include: {
         customizations: true,
+        variationGroups: {
+          where: {},
+          include: {
+            options: {
+              orderBy: { displayOrder: 'asc' },
+            },
+          },
+          orderBy: { displayOrder: 'asc' },
+        },
       },
       orderBy: [
         { category: 'asc' },
@@ -64,6 +73,14 @@ export class MenuService {
       },
       include: {
         customizations: true,
+        variationGroups: {
+          include: {
+            options: {
+              orderBy: { displayOrder: 'asc' },
+            },
+          },
+          orderBy: { displayOrder: 'asc' },
+        },
       },
       orderBy: [
         { weekday: 'asc' },
@@ -85,13 +102,21 @@ export class MenuService {
   }
 
   /**
-   * Get menu item by ID with customizations
+   * Get menu item by ID with customizations and variations
    */
   async getMenuItem(itemId: string) {
     const item = await prisma.menuItem.findUnique({
       where: { id: itemId },
       include: {
         customizations: true,
+        variationGroups: {
+          include: {
+            options: {
+              orderBy: { displayOrder: 'asc' },
+            },
+          },
+          orderBy: { displayOrder: 'asc' },
+        },
       },
     });
 

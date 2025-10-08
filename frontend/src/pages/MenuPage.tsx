@@ -24,9 +24,10 @@ import {
   Badge,
 } from '@mui/material';
 import { Add as AddIcon, ShoppingCart as CartIcon } from '@mui/icons-material';
-import { menuApi, MenuItem } from '../services/api';
+import { menuApi, MenuItem, VariationSelection } from '../services/api';
 import { useCart } from '../contexts/CartContext';
 import CartDrawer from '../components/CartDrawer';
+import VariationSelector from '../components/VariationSelector';
 
 const MenuPage: React.FC = () => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -36,6 +37,7 @@ const MenuPage: React.FC = () => {
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedCustomizations, setSelectedCustomizations] = useState<string[]>([]);
+  const [selectedVariations, setSelectedVariations] = useState<VariationSelection[]>([]);
   const [specialRequests, setSpecialRequests] = useState('');
   const [cartOpen, setCartOpen] = useState(false);
   const [orderingWindow, setOrderingWindow] = useState<any>(null);
@@ -74,17 +76,67 @@ const MenuPage: React.FC = () => {
     setSelectedItem(item);
     setQuantity(1);
     setSelectedCustomizations([]);
+    setSelectedVariations([]);
     setSpecialRequests('');
+
+    // Set default variations if any exist
+    if (item.variationGroups) {
+      const defaultSelections: VariationSelection[] = [];
+      item.variationGroups.forEach((group) => {
+        const defaultOption = group.options.find((opt) => opt.isDefault);
+        if (defaultOption && group.type === 'SINGLE_SELECT') {
+          defaultSelections.push({ groupId: group.id, optionIds: [defaultOption.id] });
+        }
+      });
+      setSelectedVariations(defaultSelections);
+    }
   };
 
   const handleConfirmAddToCart = () => {
     if (selectedItem) {
-      addItem(selectedItem, quantity, selectedCustomizations, specialRequests);
+      // Validate required variation groups
+      if (selectedItem.variationGroups) {
+        const requiredGroups = selectedItem.variationGroups.filter((g) => g.required);
+        const missingRequired = requiredGroups.some(
+          (group) => !selectedVariations.find((s) => s.groupId === group.id)
+        );
+
+        if (missingRequired) {
+          alert('Please select all required options');
+          return;
+        }
+      }
+
+      addItem(selectedItem, quantity, selectedCustomizations, specialRequests, selectedVariations);
       setSelectedItem(null);
       setQuantity(1);
       setSelectedCustomizations([]);
+      setSelectedVariations([]);
       setSpecialRequests('');
     }
+  };
+
+  const calculateDialogPrice = (): number => {
+    if (!selectedItem) return 0;
+
+    let basePrice = Number(selectedItem.price);
+
+    // Calculate variation modifiers
+    if (selectedItem.variationGroups && selectedVariations.length > 0) {
+      selectedVariations.forEach((selection) => {
+        const group = selectedItem.variationGroups!.find((g) => g.id === selection.groupId);
+        if (group) {
+          selection.optionIds.forEach((optionId) => {
+            const option = group.options.find((o) => o.id === optionId);
+            if (option) {
+              basePrice += Number(option.priceModifier);
+            }
+          });
+        }
+      });
+    }
+
+    return basePrice * quantity;
   };
 
   const handleCustomizationChange = (customization: string) => {
@@ -235,10 +287,19 @@ const MenuPage: React.FC = () => {
               sx={{ mb: 3 }}
             />
 
+            {/* Variation Groups */}
+            {selectedItem && selectedItem.variationGroups && selectedItem.variationGroups.length > 0 && (
+              <VariationSelector
+                variationGroups={selectedItem.variationGroups}
+                selectedVariations={selectedVariations}
+                onChange={setSelectedVariations}
+              />
+            )}
+
             {selectedItem && selectedItem.customizations.length > 0 && (
               <Box sx={{ mb: 3 }}>
                 <Typography variant="subtitle1" gutterBottom>
-                  Customizations
+                  Customizations (Legacy)
                 </Typography>
                 <FormGroup>
                   {selectedItem.customizations.map((custom) => (
@@ -265,7 +326,27 @@ const MenuPage: React.FC = () => {
               value={specialRequests}
               onChange={(e) => setSpecialRequests(e.target.value)}
               placeholder="Any special requests for this item?"
+              sx={{ mb: 2 }}
             />
+
+            {/* Price Display */}
+            <Box
+              sx={{
+                mt: 2,
+                p: 2,
+                bgcolor: 'primary.main',
+                color: 'white',
+                borderRadius: 1,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <Typography variant="h6">Total:</Typography>
+              <Typography variant="h5" fontWeight="bold">
+                ${calculateDialogPrice().toFixed(2)}
+              </Typography>
+            </Box>
           </Box>
         </DialogContent>
         <DialogActions>

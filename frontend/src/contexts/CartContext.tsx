@@ -1,16 +1,23 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { MenuItem } from '../services/api';
+import { MenuItem, VariationSelection, SelectedVariation } from '../services/api';
 
 export interface CartItem {
   menuItem: MenuItem;
   quantity: number;
   customizations: string[];
   specialRequests?: string;
+  selectedVariations?: VariationSelection[];
 }
 
 interface CartContextType {
   items: CartItem[];
-  addItem: (menuItem: MenuItem, quantity: number, customizations: string[], specialRequests?: string) => void;
+  addItem: (
+    menuItem: MenuItem,
+    quantity: number,
+    customizations: string[],
+    specialRequests?: string,
+    selectedVariations?: VariationSelection[]
+  ) => void;
   removeItem: (menuItemId: string) => void;
   updateQuantity: (menuItemId: string, quantity: number) => void;
   updateCustomizations: (menuItemId: string, customizations: string[]) => void;
@@ -18,6 +25,7 @@ interface CartContextType {
   clearCart: () => void;
   getCartTotal: () => number;
   getCartItemCount: () => number;
+  calculateItemPrice: (item: CartItem) => number;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -54,11 +62,33 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     localStorage.setItem('cart', JSON.stringify(items));
   }, [items]);
 
+  const calculateItemPrice = (item: CartItem): number => {
+    let basePrice = Number(item.menuItem.price);
+
+    // Calculate variation modifiers
+    if (item.selectedVariations && item.menuItem.variationGroups) {
+      for (const selection of item.selectedVariations) {
+        const group = item.menuItem.variationGroups.find(g => g.id === selection.groupId);
+        if (group) {
+          for (const optionId of selection.optionIds) {
+            const option = group.options.find(o => o.id === optionId);
+            if (option) {
+              basePrice += Number(option.priceModifier);
+            }
+          }
+        }
+      }
+    }
+
+    return basePrice;
+  };
+
   const addItem = (
     menuItem: MenuItem,
     quantity: number,
     customizations: string[],
-    specialRequests?: string
+    specialRequests?: string,
+    selectedVariations?: VariationSelection[]
   ) => {
     setItems((prevItems) => {
       // Check if item already exists in cart
@@ -74,11 +104,12 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
           quantity: updatedItems[existingItemIndex].quantity + quantity,
           customizations,
           specialRequests,
+          selectedVariations,
         };
         return updatedItems;
       } else {
         // Add new item
-        return [...prevItems, { menuItem, quantity, customizations, specialRequests }];
+        return [...prevItems, { menuItem, quantity, customizations, specialRequests, selectedVariations }];
       }
     });
   };
@@ -123,7 +154,8 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
   const getCartTotal = () => {
     return items.reduce((total, item) => {
-      return total + Number(item.menuItem.price) * item.quantity;
+      const itemPrice = calculateItemPrice(item);
+      return total + itemPrice * item.quantity;
     }, 0);
   };
 
@@ -141,6 +173,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     clearCart,
     getCartTotal,
     getCartItemCount,
+    calculateItemPrice,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

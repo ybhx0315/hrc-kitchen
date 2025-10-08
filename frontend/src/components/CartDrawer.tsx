@@ -29,7 +29,7 @@ interface CartDrawerProps {
 }
 
 const CartDrawer: React.FC<CartDrawerProps> = ({ open, onClose }) => {
-  const { items, removeItem, updateQuantity, clearCart, getCartTotal, getCartItemCount } = useCart();
+  const { items, removeItem, updateQuantity, clearCart, getCartTotal, getCartItemCount, calculateItemPrice } = useCart();
   const navigate = useNavigate();
 
   const handleCheckout = () => {
@@ -86,12 +86,51 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ open, onClose }) => {
                     </Box>
 
                     <Typography variant="body2" color="text.secondary">
-                      ${Number(item.menuItem.price).toFixed(2)} each
+                      ${calculateItemPrice(item).toFixed(2)} each
                     </Typography>
 
-                    {/* Customizations */}
+                    {/* Selected Variations */}
+                    {item.selectedVariations && item.selectedVariations.length > 0 && (
+                      <Box sx={{ mt: 1 }}>
+                        {item.selectedVariations.map((selection) => {
+                          const group = item.menuItem.variationGroups?.find(
+                            (g) => g.id === selection.groupId
+                          );
+                          if (!group) return null;
+
+                          const selectedOptions = selection.optionIds
+                            .map((optionId) => group.options.find((o) => o.id === optionId))
+                            .filter(Boolean);
+
+                          return (
+                            <Box key={selection.groupId} sx={{ mb: 0.5 }}>
+                              <Typography variant="caption" color="text.secondary" display="block">
+                                {group.name}:
+                              </Typography>
+                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, ml: 1 }}>
+                                {selectedOptions.map((option) => (
+                                  <Chip
+                                    key={option!.id}
+                                    label={`${option!.name}${
+                                      option!.priceModifier !== 0
+                                        ? ` (+$${Number(option!.priceModifier).toFixed(2)})`
+                                        : ''
+                                    }`}
+                                    size="small"
+                                    color="primary"
+                                    variant="outlined"
+                                  />
+                                ))}
+                              </Box>
+                            </Box>
+                          );
+                        })}
+                      </Box>
+                    )}
+
+                    {/* Customizations (Legacy) */}
                     {item.customizations.length > 0 && (
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
                         {item.customizations.map((custom, index) => (
                           <Chip key={index} label={custom} size="small" variant="outlined" />
                         ))}
@@ -124,7 +163,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ open, onClose }) => {
                         <AddIcon fontSize="small" />
                       </IconButton>
                       <Typography variant="body2" sx={{ ml: 'auto', fontWeight: 'bold' }}>
-                        ${(Number(item.menuItem.price) * item.quantity).toFixed(2)}
+                        ${(calculateItemPrice(item) * item.quantity).toFixed(2)}
                       </Typography>
                     </Box>
                   </ListItem>

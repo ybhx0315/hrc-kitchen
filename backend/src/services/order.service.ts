@@ -1,6 +1,7 @@
 import { CreateOrderDto, OrderWithDetails } from '../types/order.types';
 import { PaymentService } from './payment.service';
 import { ConfigService } from './config.service';
+import { SelectedVariation } from '../types/variation.types';
 import prisma from '../lib/prisma';
 
 export class OrderService {
@@ -22,6 +23,13 @@ export class OrderService {
       where: {
         id: { in: orderData.items.map(item => item.menuItemId) },
         isActive: true
+      },
+      include: {
+        variationGroups: {
+          include: {
+            options: true
+          }
+        }
       }
     });
 
@@ -29,17 +37,47 @@ export class OrderService {
       throw new Error('One or more menu items are invalid or unavailable');
     }
 
-    // Calculate total amount
+    // Calculate total amount with variations
     let totalAmount = 0;
     const orderItems = orderData.items.map(item => {
       const menuItem = menuItems.find(mi => mi.id === item.menuItemId);
       if (!menuItem) throw new Error(`Menu item ${item.menuItemId} not found`);
 
-      const priceNum = Number(menuItem.price);
-      const subtotal = priceNum * item.quantity;
+      const basePrice = Number(menuItem.price);
+
+      // Calculate variation modifier
+      let variationModifier = 0;
+      let selectedVariations: SelectedVariation[] | null = null;
+
+      if (item.selectedVariations && item.selectedVariations.length > 0) {
+        selectedVariations = [];
+
+        for (const selection of item.selectedVariations) {
+          const group = menuItem.variationGroups.find(g => g.id === selection.groupId);
+          if (!group) continue;
+
+          for (const optionId of selection.optionIds) {
+            const option = group.options.find(o => o.id === optionId);
+            if (option) {
+              const modifier = Number(option.priceModifier);
+              variationModifier += modifier;
+              selectedVariations.push({
+                groupId: group.id,
+                groupName: group.name,
+                optionId: option.id,
+                optionName: option.name,
+                priceModifier: modifier
+              });
+            }
+          }
+        }
+      }
+
+      const itemPrice = basePrice + variationModifier;
+      const subtotal = itemPrice * item.quantity;
       totalAmount += subtotal;
 
-      // Build customizations object
+      // Build customizations object (legacy)
       const customizationsObj: any = {};
       if (item.customizations) {
         customizationsObj.customizations = item.customizations;
@@ -51,8 +89,12 @@ export class OrderService {
       return {
         menuItemId: item.menuItemId,
         quantity: item.quantity,
-        priceAtPurchase: menuItem.price,
-        customizations: Object.keys(customizationsObj).length > 0 ? customizationsObj : null
+        priceAtPurchase: itemPrice, // Store final price per item (base + variations)
+        customizations: Object.keys(customizationsObj).length > 0 ? customizationsObj : null,
+        selectedVariations: selectedVariations ? {
+          variations: selectedVariations,
+          totalModifier: variationModifier
+        } : null
       };
     });
 
@@ -138,7 +180,12 @@ export class OrderService {
                 name: true,
                 description: true,
                 imageUrl: true,
-                price: true
+                price: true,
+                variationGroups: {
+                  include: {
+                    options: true
+                  }
+                }
               }
             }
           }
@@ -160,7 +207,12 @@ export class OrderService {
                 name: true,
                 description: true,
                 imageUrl: true,
-                price: true
+                price: true,
+                variationGroups: {
+                  include: {
+                    options: true
+                  }
+                }
               }
             }
           }

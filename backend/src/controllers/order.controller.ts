@@ -69,9 +69,11 @@ export class OrderController {
       });
     } catch (error) {
       console.error('Error fetching user orders:', error);
+      console.error('Error details:', error instanceof Error ? error.message : error);
+      console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack');
       res.status(500).json({
         success: false,
-        message: 'Failed to fetch orders'
+        message: error instanceof Error ? error.message : 'Failed to fetch orders'
       });
     }
   };

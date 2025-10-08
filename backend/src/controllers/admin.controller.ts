@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import adminService from '../services/admin.service';
 import UploadService from '../services/upload.service';
-import { Weekday, Category, UserRole } from '@prisma/client';
+import { Weekday, Category, UserRole, VariationGroupType } from '@prisma/client';
 
 export class AdminController {
   /**
@@ -442,6 +442,252 @@ export class AdminController {
       res.status(500).json({
         success: false,
         message: 'Failed to upload image',
+      });
+    }
+  }
+
+  // ==================== VARIATION GROUP ENDPOINTS ====================
+
+  /**
+   * POST /api/v1/admin/menu/items/:id/variation-groups
+   * Create a variation group for a menu item
+   */
+  async createVariationGroup(req: AuthRequest, res: Response) {
+    try {
+      const { id: menuItemId } = req.params;
+      const { name, type, required, displayOrder } = req.body;
+
+      if (!name || !type) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields: name, type',
+        });
+      }
+
+      const group = await adminService.createVariationGroup({
+        menuItemId,
+        name,
+        type: type as VariationGroupType,
+        required,
+        displayOrder,
+      });
+
+      res.status(201).json({
+        success: true,
+        data: group,
+        message: 'Variation group created successfully',
+      });
+    } catch (error) {
+      console.error('Error creating variation group:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create variation group',
+      });
+    }
+  }
+
+  /**
+   * PUT /api/v1/admin/variation-groups/:id
+   * Update a variation group
+   */
+  async updateVariationGroup(req: AuthRequest, res: Response) {
+    try {
+      const { id } = req.params;
+      const { name, type, required, displayOrder } = req.body;
+
+      const group = await adminService.updateVariationGroup(id, {
+        name,
+        type: type as VariationGroupType,
+        required,
+        displayOrder,
+      });
+
+      if (!group) {
+        return res.status(404).json({
+          success: false,
+          message: 'Variation group not found',
+        });
+      }
+
+      res.json({
+        success: true,
+        data: group,
+        message: 'Variation group updated successfully',
+      });
+    } catch (error) {
+      console.error('Error updating variation group:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to update variation group',
+      });
+    }
+  }
+
+  /**
+   * DELETE /api/v1/admin/variation-groups/:id
+   * Delete a variation group
+   */
+  async deleteVariationGroup(req: AuthRequest, res: Response) {
+    try {
+      const { id } = req.params;
+
+      await adminService.deleteVariationGroup(id);
+
+      res.json({
+        success: true,
+        message: 'Variation group deleted successfully',
+      });
+    } catch (error) {
+      console.error('Error deleting variation group:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to delete variation group',
+      });
+    }
+  }
+
+  /**
+   * GET /api/v1/admin/menu/items/:id/variation-groups
+   * Get all variation groups for a menu item
+   */
+  async getVariationGroups(req: AuthRequest, res: Response) {
+    try {
+      const { id: menuItemId } = req.params;
+
+      const groups = await adminService.getVariationGroups(menuItemId);
+
+      res.json({
+        success: true,
+        data: groups,
+      });
+    } catch (error) {
+      console.error('Error fetching variation groups:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch variation groups',
+      });
+    }
+  }
+
+  // ==================== VARIATION OPTION ENDPOINTS ====================
+
+  /**
+   * POST /api/v1/admin/variation-groups/:id/options
+   * Create a variation option
+   */
+  async createVariationOption(req: AuthRequest, res: Response) {
+    try {
+      const { id: variationGroupId } = req.params;
+      const { name, priceModifier, isDefault, displayOrder } = req.body;
+
+      if (!name) {
+        return res.status(400).json({
+          success: false,
+          message: 'Option name is required',
+        });
+      }
+
+      const option = await adminService.createVariationOption({
+        variationGroupId,
+        name,
+        priceModifier: priceModifier !== undefined ? parseFloat(priceModifier) : 0,
+        isDefault,
+        displayOrder,
+      });
+
+      res.status(201).json({
+        success: true,
+        data: option,
+        message: 'Variation option created successfully',
+      });
+    } catch (error) {
+      console.error('Error creating variation option:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create variation option',
+      });
+    }
+  }
+
+  /**
+   * PUT /api/v1/admin/variation-options/:id
+   * Update a variation option
+   */
+  async updateVariationOption(req: AuthRequest, res: Response) {
+    try {
+      const { id } = req.params;
+      const { name, priceModifier, isDefault, displayOrder } = req.body;
+
+      const option = await adminService.updateVariationOption(id, {
+        name,
+        priceModifier: priceModifier !== undefined ? parseFloat(priceModifier) : undefined,
+        isDefault,
+        displayOrder,
+      });
+
+      if (!option) {
+        return res.status(404).json({
+          success: false,
+          message: 'Variation option not found',
+        });
+      }
+
+      res.json({
+        success: true,
+        data: option,
+        message: 'Variation option updated successfully',
+      });
+    } catch (error) {
+      console.error('Error updating variation option:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to update variation option',
+      });
+    }
+  }
+
+  /**
+   * DELETE /api/v1/admin/variation-options/:id
+   * Delete a variation option
+   */
+  async deleteVariationOption(req: AuthRequest, res: Response) {
+    try {
+      const { id } = req.params;
+
+      await adminService.deleteVariationOption(id);
+
+      res.json({
+        success: true,
+        message: 'Variation option deleted successfully',
+      });
+    } catch (error) {
+      console.error('Error deleting variation option:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to delete variation option',
+      });
+    }
+  }
+
+  /**
+   * GET /api/v1/admin/variation-groups/:id/options
+   * Get all options for a variation group
+   */
+  async getVariationOptions(req: AuthRequest, res: Response) {
+    try {
+      const { id: groupId } = req.params;
+
+      const options = await adminService.getVariationOptions(groupId);
+
+      res.json({
+        success: true,
+        data: options,
+      });
+    } catch (error) {
+      console.error('Error fetching variation options:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch variation options',
       });
     }
   }

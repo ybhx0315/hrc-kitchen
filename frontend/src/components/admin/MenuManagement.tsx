@@ -41,6 +41,7 @@ import {
   ViewList as ViewListIcon,
 } from '@mui/icons-material';
 import api from '../../services/api';
+import VariationGroupManager from './VariationGroupManager';
 
 interface MenuItem {
   id: string;
@@ -75,6 +76,7 @@ const MenuManagement = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'weekday' | 'category' | 'all'>('weekday');
   const [selectedCategory, setSelectedCategory] = useState<string>('MAIN');
+  const [dialogTab, setDialogTab] = useState(0);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -141,6 +143,7 @@ const MenuManagement = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingItem(null);
+    setDialogTab(0);
   };
 
   const handleSaveItem = async () => {
@@ -509,12 +512,21 @@ const MenuManagement = () => {
       </Grid>
 
       {/* Add/Edit Dialog */}
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
         <DialogTitle>
           {editingItem ? 'Edit Menu Item' : 'Add Menu Item'}
         </DialogTitle>
+        <Tabs
+          value={dialogTab}
+          onChange={(_, newValue) => setDialogTab(newValue)}
+          sx={{ borderBottom: 1, borderColor: 'divider', px: 3 }}
+        >
+          <Tab label="Basic Info" />
+          <Tab label="Variations" disabled={!editingItem} />
+        </Tabs>
         <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
+          {dialogTab === 0 && (
+            <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
               label="Name"
               fullWidth
@@ -657,12 +669,26 @@ const MenuManagement = () => {
               label="Active"
             />
           </Stack>
+          )}
+
+          {dialogTab === 1 && editingItem && (
+            <Box sx={{ mt: 2 }}>
+              <VariationGroupManager
+                menuItemId={editingItem.id}
+                onUpdate={fetchMenuItems}
+              />
+            </Box>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button onClick={handleSaveItem} variant="contained">
-            {editingItem ? 'Update' : 'Create'}
+          <Button onClick={handleCloseDialog}>
+            {dialogTab === 1 ? 'Done' : 'Cancel'}
           </Button>
+          {dialogTab === 0 && (
+            <Button onClick={handleSaveItem} variant="contained">
+              {editingItem ? 'Update' : 'Create'}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 

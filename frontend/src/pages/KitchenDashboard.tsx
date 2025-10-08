@@ -50,6 +50,7 @@ interface Order {
     id: string;
     quantity: number;
     customizations: any;
+    selectedVariations: any;
     fulfillmentStatus: 'PLACED' | 'FULFILLED';
     menuItem: {
       id: string;
@@ -57,6 +58,7 @@ interface Order {
       description: string;
       category: string;
       imageUrl: string | null;
+      variationGroups?: any[];
     };
   }>;
 }
@@ -75,8 +77,12 @@ interface OrderSummary {
     orderNumber: string;
     quantity: number;
     customizations: any;
+    selectedVariations: any;
     customerName: string;
     fulfillmentStatus: string;
+    menuItem?: {
+      variationGroups?: any[];
+    };
   }>;
 }
 
@@ -104,7 +110,13 @@ const KitchenDashboard = () => {
   const [stats, setStats] = useState<DailyStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
   const [flashingCards, setFlashingCards] = useState<Record<string, boolean>>({});
@@ -553,36 +565,41 @@ const KitchenDashboard = () => {
                         order: isFullyFulfilled ? 1000 + itemIndex : itemIndex,
                       }}
                     >
-                      <Card
-                        sx={{
-                          transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
-                          backgroundColor: flashingCards[item.menuItem.id]
-                            ? 'rgba(76, 175, 80, 0.15)'
-                            : 'white',
-                          boxShadow: flashingCards[item.menuItem.id]
-                            ? '0 4px 20px rgba(76, 175, 80, 0.4)'
-                            : undefined,
-                        }}
-                      >
-                        <CardContent>
-                          {(() => {
-                            // Calculate fulfillment progress
-                            const fulfilledCount = orders.reduce((count, order) => {
-                              return count + order.orderItems.filter(
-                                oi => oi.menuItem.id === item.menuItem.id && oi.fulfillmentStatus === 'FULFILLED'
-                              ).length;
-                            }, 0);
-                            const totalCount = orders.reduce((count, order) => {
-                              return count + order.orderItems.filter(
-                                oi => oi.menuItem.id === item.menuItem.id
-                              ).length;
-                            }, 0);
-                            const hasUnfulfilledItems = fulfilledCount < totalCount;
+                      {(() => {
+                        // Calculate fulfillment progress
+                        const fulfilledCount = orders.reduce((count, order) => {
+                          return count + order.orderItems.filter(
+                            oi => oi.menuItem.id === item.menuItem.id && oi.fulfillmentStatus === 'FULFILLED'
+                          ).length;
+                        }, 0);
+                        const totalCount = orders.reduce((count, order) => {
+                          return count + order.orderItems.filter(
+                            oi => oi.menuItem.id === item.menuItem.id
+                          ).length;
+                        }, 0);
+                        const hasUnfulfilledItems = fulfilledCount < totalCount;
+                        const isFullyFulfilled = !hasUnfulfilledItems;
 
-                            const isExpanded = expandedCards[item.menuItem.id] ?? false;
+                        return (
+                          <Card
+                            sx={{
+                              transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+                              backgroundColor: flashingCards[item.menuItem.id]
+                                ? 'rgba(76, 175, 80, 0.15)'
+                                : isFullyFulfilled
+                                ? 'rgba(76, 175, 80, 0.08)'
+                                : 'white',
+                              boxShadow: flashingCards[item.menuItem.id]
+                                ? '0 4px 20px rgba(76, 175, 80, 0.4)'
+                                : undefined,
+                            }}
+                          >
+                            <CardContent>
+                              {(() => {
+                                const isExpanded = expandedCards[item.menuItem.id] ?? false;
 
-                            return (
-                              <>
+                                return (
+                                  <>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                     <Typography variant="h6">{item.menuItem.name}</Typography>
@@ -720,12 +737,25 @@ const KitchenDashboard = () => {
                                   <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
                                     {order.quantity}x
                                   </Typography>
-                                  <Box>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
                                     <Typography variant="body2" color="text.primary" sx={{ fontWeight: 'medium' }}>
                                       {order.customerName}
                                     </Typography>
+                                    {order.selectedVariations && order.selectedVariations.variations && order.selectedVariations.variations.length > 0 && (
+                                      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75, ml: 1 }}>
+                                        {order.selectedVariations.variations.map((variation: any, idx: number) => (
+                                          <Chip
+                                            key={idx}
+                                            label={`${variation.groupName}: ${variation.optionName}`}
+                                            size="small"
+                                            color="primary"
+                                            variant="outlined"
+                                          />
+                                        ))}
+                                      </Box>
+                                    )}
                                     {order.customizations && order.customizations.customizations && (
-                                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                                      <Typography variant="caption" color="text.secondary" sx={{ width: '100%' }}>
                                         {order.customizations.customizations.join(', ')}
                                       </Typography>
                                     )}
@@ -756,6 +786,8 @@ const KitchenDashboard = () => {
                           </Collapse>
                         </CardContent>
                       </Card>
+                        );
+                      })()}
                     </Grid>
                       );
                     })}
@@ -772,9 +804,23 @@ const KitchenDashboard = () => {
                 <Alert severity="info">No orders found for the selected date and filters.</Alert>
               ) : (
                 <Grid container spacing={2}>
-                  {orders.map((order) => (
+                  {orders
+                    .slice()
+                    .sort((a, b) => {
+                      // Prioritize unfulfilled/partially fulfilled orders
+                      const priorityA = a.fulfillmentStatus === 'FULFILLED' ? 1 : 0;
+                      const priorityB = b.fulfillmentStatus === 'FULFILLED' ? 1 : 0;
+                      return priorityA - priorityB;
+                    })
+                    .map((order) => (
                     <Grid item xs={12} key={order.id}>
-                      <Card>
+                      <Card
+                        sx={{
+                          backgroundColor: order.fulfillmentStatus === 'FULFILLED'
+                            ? 'rgba(76, 175, 80, 0.08)'
+                            : 'white',
+                        }}
+                      >
                         <CardContent>
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                             <Box>
@@ -807,17 +853,36 @@ const KitchenDashboard = () => {
                             {order.orderItems.map((item) => (
                               <Box key={item.id} sx={{
                                 p: 1.5,
-                                border: '1px solid #e0e0e0',
+                                border: order.fulfillmentStatus === 'FULFILLED'
+                                  ? '1px solid transparent'
+                                  : '1px solid #e0e0e0',
                                 borderRadius: 1,
-                                backgroundColor: item.fulfillmentStatus === 'FULFILLED' ? '#f1f8f4' : 'transparent'
+                                backgroundColor: order.fulfillmentStatus === 'FULFILLED'
+                                  ? 'transparent'
+                                  : item.fulfillmentStatus === 'FULFILLED'
+                                  ? 'rgba(76, 175, 80, 0.08)'
+                                  : 'transparent'
                               }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                                  <Box sx={{ flex: 1 }}>
+                                  <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
                                     <Typography variant="body1">
                                       <strong>{item.quantity}x</strong> {item.menuItem.name}
                                     </Typography>
-                                    {item.customizations && (
-                                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                                    {item.selectedVariations && item.selectedVariations.variations && item.selectedVariations.variations.length > 0 && (
+                                      <>
+                                        {item.selectedVariations.variations.map((variation: any, idx: number) => (
+                                          <Chip
+                                            key={idx}
+                                            label={`${variation.groupName}: ${variation.optionName}`}
+                                            size="small"
+                                            color="primary"
+                                            variant="outlined"
+                                          />
+                                        ))}
+                                      </>
+                                    )}
+                                    {item.customizations && (item.customizations.customizations || item.customizations.specialRequests) && (
+                                      <Typography variant="body2" color="text.secondary" sx={{ width: '100%', mt: 0.5 }}>
                                         {item.customizations.customizations &&
                                           `Customizations: ${item.customizations.customizations.join(', ')}`}
                                         {item.customizations.specialRequests &&

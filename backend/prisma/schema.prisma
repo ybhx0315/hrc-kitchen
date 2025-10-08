@@ -44,6 +44,11 @@ enum Weekday {
   FRIDAY
 }
 
+enum VariationGroupType {
+  SINGLE_SELECT
+  MULTI_SELECT
+}
+
 model User {
   id            String    @id @default(uuid())
   email         String    @unique
@@ -80,6 +85,7 @@ model MenuItem {
 
   // Relations
   customizations  MenuItemCustomization[]
+  variationGroups VariationGroup[]
   orderItems      OrderItem[]
 
   @@index([weekday, isActive])
@@ -97,6 +103,41 @@ model MenuItemCustomization {
 
   @@index([menuItemId])
   @@map("menu_item_customizations")
+}
+
+model VariationGroup {
+  id           String              @id @default(uuid())
+  menuItemId   String              @map("menu_item_id")
+  name         String              // "Protein Choice", "Spice Level", "Size", etc.
+  type         VariationGroupType  @default(SINGLE_SELECT)
+  required     Boolean             @default(false)
+  displayOrder Int                 @default(0) @map("display_order")
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+
+  // Relations
+  menuItem     MenuItem            @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  options      VariationOption[]
+
+  @@index([menuItemId])
+  @@map("variation_groups")
+}
+
+model VariationOption {
+  id               String         @id @default(uuid())
+  variationGroupId String         @map("variation_group_id")
+  name             String         // "Grilled Chicken", "Mild", "Large", etc.
+  priceModifier    Decimal        @default(0) @db.Decimal(10, 2) @map("price_modifier")
+  isDefault        Boolean        @default(false) @map("is_default")
+  displayOrder     Int            @default(0) @map("display_order")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  variationGroup   VariationGroup @relation(fields: [variationGroupId], references: [id], onDelete: Cascade)
+
+  @@index([variationGroupId])
+  @@map("variation_options")
 }
 
 model Order {
@@ -123,14 +164,15 @@ model Order {
 }
 
 model OrderItem {
-  id                String      @id @default(uuid())
-  orderId           String      @map("order_id")
-  menuItemId        String      @map("menu_item_id")
-  quantity          Int         @default(1)
-  customizations    Json?       @db.JsonB
-  priceAtPurchase   Decimal     @db.Decimal(10, 2) @map("price_at_purchase")
-  fulfillmentStatus OrderStatus @default(PLACED) @map("fulfillment_status")
-  createdAt         DateTime    @default(now()) @map("created_at")
+  id                 String      @id @default(uuid())
+  orderId            String      @map("order_id")
+  menuItemId         String      @map("menu_item_id")
+  quantity           Int         @default(1)
+  customizations     Json?       @db.JsonB  // Legacy: old free-text customizations
+  selectedVariations Json?       @map("selected_variations") @db.JsonB  // New: structured variations with pricing
+  priceAtPurchase    Decimal     @db.Decimal(10, 2) @map("price_at_purchase")
+  fulfillmentStatus  OrderStatus @default(PLACED) @map("fulfillment_status")
+  createdAt          DateTime    @default(now()) @map("created_at")
 
   // Relations
   order             Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
