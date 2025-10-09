@@ -41,8 +41,13 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const AdminDashboard = () => {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const [currentTab, setCurrentTab] = useState(0);
+
+  // Wait for auth to load before checking permissions
+  if (isLoading) {
+    return null; // or a loading spinner if you prefer
+  }
 
   // Check if user is admin
   if (!user || user.role !== 'ADMIN') {
