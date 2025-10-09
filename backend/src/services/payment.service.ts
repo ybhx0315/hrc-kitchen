@@ -25,6 +25,7 @@ export class PaymentService {
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(data.amount * 100), // Convert to cents
         currency: data.currency || process.env.STRIPE_CURRENCY || 'aud',
+        receipt_email: data.customerEmail, // Stripe automatically sends receipt on successful payment
         metadata: {
           orderId: data.orderId || '',
           customerEmail: data.customerEmail,

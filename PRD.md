@@ -278,19 +278,25 @@ Product variations enable menu items to have structured options with price modif
 
 #### 4.4.2 Receipts & Records
 **Priority**: P0 (Must Have)
+**Status**: ✅ Implemented (Stripe-hosted receipts)
 
 **Requirements**:
-- FR-10.1: Digital receipt generated upon payment
-- FR-10.2: Receipt includes:
-  - Order number
+- FR-10.1: Digital receipt generated upon payment ✅
+- FR-10.2: Receipt includes (via Stripe):
+  - Order number (transaction ID)
   - Date and time
-  - Itemized list with prices
-  - Subtotal, tax (if applicable), total
+  - Itemized payment amount
   - Payment method (last 4 digits)
-  - Transaction ID
-- FR-10.3: Receipt sent via email
-- FR-10.4: Receipt accessible in order history
-- FR-10.5: Receipt downloadable as PDF
+  - Stripe transaction ID
+- FR-10.3: Receipt sent via email automatically by Stripe ✅
+- FR-10.4: Receipt accessible via Stripe-hosted URL (30-day availability)
+- FR-10.5: ~~Receipt downloadable as PDF~~ (Deferred to future enhancement)
+
+**Implementation Notes**:
+- Using Stripe's built-in `receipt_email` functionality
+- Receipts automatically sent on successful payment
+- Professional Stripe-branded receipt design
+- Future enhancement: Custom HRC Kitchen-branded PDF receipts with full order details
 
 ### 4.5 Kitchen Dashboard
 
@@ -328,13 +334,20 @@ Product variations enable menu items to have structured options with price modif
 
 #### 4.5.3 Kitchen Ticket Printing
 **Priority**: P1 (Should Have)
+**Status**: ✅ Implemented (Bulk summary only)
 
 **Requirements**:
-- FR-13.1: Print-friendly view of daily orders
-- FR-13.2: Print view groups by menu item
-- FR-13.3: Includes all customizations and special requests
-- FR-13.4: Print individual order tickets
-- FR-13.5: Print bulk summary for batch preparation
+- FR-13.1: Print-friendly view of daily orders ✅
+- FR-13.2: Print view groups by menu item ✅
+- FR-13.3: Includes all customizations and special requests ✅
+- FR-13.4: ~~Print individual order tickets~~ (Out of scope - bulk summary sufficient)
+- FR-13.5: Print bulk summary for batch preparation ✅
+
+**Implementation Notes**:
+- Single "Print All" button on kitchen dashboard
+- Prints batch preparation summary grouped by menu item
+- Shows total quantities, customizations, and special requests
+- Optimized for kitchen workflow (batch cooking)
 
 ### 4.6 Order Status & History
 

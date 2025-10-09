@@ -41,9 +41,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 </Button>
               ) : null}
               {user?.role === 'ADMIN' ? (
-                <Button color="inherit" component={Link} to="/admin">
-                  Admin
-                </Button>
+                <>
+                  <Button color="inherit" component={Link} to="/admin">
+                    Admin
+                  </Button>
+                  <Button color="inherit" component={Link} to="/reports">
+                    Reports
+                  </Button>
+                </>
               ) : null}
               <Button color="inherit" onClick={handleLogout}>
                 Logout

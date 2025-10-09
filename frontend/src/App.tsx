@@ -10,6 +10,7 @@ import OrderConfirmationPage from './pages/OrderConfirmationPage';
 import OrdersPage from './pages/OrdersPage';
 import KitchenDashboard from './pages/KitchenDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import ReportsPage from './pages/ReportsPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 
@@ -29,6 +30,7 @@ function App() {
               <Route path="/orders" element={<OrdersPage />} />
               <Route path="/kitchen" element={<KitchenDashboard />} />
               <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/reports" element={<ReportsPage />} />
             </Routes>
           </Container>
         </Layout>

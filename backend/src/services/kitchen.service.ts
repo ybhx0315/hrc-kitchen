@@ -308,6 +308,207 @@ export class KitchenService {
   }
 
   /**
+   * Generate printable HTML for bulk summary
+   */
+  async generatePrintableHTML(date?: string): Promise<string> {
+    const summary = await this.getOrderSummary(date);
+
+    let orderDate: Date;
+    if (date) {
+      orderDate = new Date(date + 'T00:00:00');
+    } else {
+      orderDate = new Date();
+      orderDate.setHours(0, 0, 0, 0);
+    }
+
+    const formattedDate = orderDate.toLocaleDateString('en-AU', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Kitchen Batch Summary - ${formattedDate}</title>
+  <style>
+    @media print {
+      @page { margin: 1cm; }
+      body { margin: 0; }
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      border-bottom: 3px solid #333;
+      padding-bottom: 15px;
+    }
+
+    .header h1 {
+      margin: 0 0 10px 0;
+      font-size: 28px;
+    }
+
+    .header .date {
+      font-size: 18px;
+      color: #666;
+    }
+
+    .menu-item {
+      margin-bottom: 30px;
+      page-break-inside: avoid;
+      border: 2px solid #ddd;
+      padding: 15px;
+      background: #f9f9f9;
+    }
+
+    .item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #333;
+      padding-bottom: 10px;
+    }
+
+    .item-name {
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    .item-quantity {
+      font-size: 28px;
+      font-weight: bold;
+      background: #333;
+      color: white;
+      padding: 5px 15px;
+      border-radius: 5px;
+    }
+
+    .order-list {
+      margin-top: 10px;
+    }
+
+    .order {
+      margin-bottom: 10px;
+      padding: 10px;
+      background: white;
+      border-left: 4px solid #666;
+      display: grid;
+      grid-template-columns: 180px 180px 1fr 80px;
+      gap: 15px;
+      align-items: center;
+    }
+
+    .customer-name {
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    .order-number {
+      color: #666;
+      font-size: 14px;
+    }
+
+    .quantity {
+      font-weight: bold;
+      font-size: 16px;
+      text-align: right;
+    }
+
+    .details {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    .customizations {
+      font-size: 14px;
+      color: #444;
+    }
+
+    .customizations strong {
+      color: #d32f2f;
+    }
+
+    .variations {
+      font-size: 14px;
+      color: #1976d2;
+      font-weight: 500;
+    }
+
+    .print-button {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 24px;
+      background: #1976d2;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    @media print {
+      .print-button { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <button class="print-button" onclick="window.print()">🖨️ Print</button>
+
+  <div class="header">
+    <h1>Kitchen Batch Summary</h1>
+    <div class="date">${formattedDate}</div>
+  </div>
+
+  ${summary.map(item => `
+    <div class="menu-item">
+      <div class="item-header">
+        <div class="item-name">${item.menuItem.name}</div>
+        <div class="item-quantity">QTY: ${item.totalQuantity}</div>
+      </div>
+
+      <div class="order-list">
+        ${item.orders.map(order => `
+          <div class="order">
+            <div class="customer-name">${order.customerName}</div>
+            <div class="order-number">${order.orderNumber}</div>
+            <div class="details">
+              ${order.selectedVariations ? `
+                <span class="variations"><strong>Variations:</strong> ${order.selectedVariations.variations?.map((v: any) =>
+                  `${v.groupName}: ${v.optionName}`
+                ).join(', ') || 'None'}</span>
+              ` : ''}
+              ${order.customizations ? `
+                <span class="customizations"><strong>Customizations:</strong> ${JSON.stringify(order.customizations)}</span>
+              ` : ''}
+            </div>
+            <div class="quantity">× ${order.quantity}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('')}
+</body>
+</html>
+    `;
+
+    return html;
+  }
+
+  /**
    * Get daily statistics for kitchen dashboard
    */
   async getDailyStats(date?: string) {

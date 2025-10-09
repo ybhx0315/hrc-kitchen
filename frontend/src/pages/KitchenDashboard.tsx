@@ -28,7 +28,8 @@ import {
   Schedule as ScheduleIcon,
   LocalShipping as LocalShippingIcon,
   ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon
+  ExpandLess as ExpandLessIcon,
+  Print as PrintIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
@@ -387,9 +388,35 @@ const KitchenDashboard = () => {
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        Kitchen Dashboard
-      </Typography>
+      {/* Header with Print Button */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4">
+          Kitchen Dashboard
+        </Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<PrintIcon />}
+          onClick={async () => {
+            try {
+              const response = await api.get(`/kitchen/print?date=${selectedDate}`, {
+                headers: { 'Accept': 'text/html' },
+                responseType: 'text'
+              });
+              const printWindow = window.open('', '_blank');
+              if (printWindow) {
+                printWindow.document.write(response.data);
+                printWindow.document.close();
+              }
+            } catch (err) {
+              console.error('Print error:', err);
+              alert('Failed to generate print view. Please try again.');
+            }
+          }}
+        >
+          Print All
+        </Button>
+      </Box>
 
       {/* Date filter and stats */}
       <Paper sx={{ p: 2, mb: 3 }}>

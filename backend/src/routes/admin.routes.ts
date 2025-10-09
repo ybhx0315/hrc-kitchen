@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import adminController from '../controllers/admin.controller';
+import reportController from '../controllers/report.controller';
 import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
@@ -170,5 +171,41 @@ router.post('/upload/signature', adminController.getUploadSignature);
  * @access  Admin only
  */
 router.post('/upload/image', adminController.uploadImage);
+
+/**
+ * Report Routes
+ */
+
+/**
+ * @route   GET /api/v1/admin/reports/revenue-by-user
+ * @desc    Get revenue by user report with dynamic date range
+ * @access  Admin only
+ * @query   startDate, endDate, format (json|csv)
+ */
+router.get('/reports/revenue-by-user', reportController.getRevenueByUser);
+
+/**
+ * @route   GET /api/v1/admin/reports/popular-items
+ * @desc    Get popular items report with dynamic date range
+ * @access  Admin only
+ * @query   startDate, endDate, format (json|csv)
+ */
+router.get('/reports/popular-items', reportController.getPopularItems);
+
+/**
+ * @route   GET /api/v1/admin/reports/summary
+ * @desc    Get summary statistics report with dynamic date range
+ * @access  Admin only
+ * @query   startDate, endDate
+ */
+router.get('/reports/summary', reportController.getSummary);
+
+/**
+ * @route   GET /api/v1/admin/reports/orders
+ * @desc    Get detailed orders report with dynamic date range and filters
+ * @access  Admin only
+ * @query   startDate, endDate, paymentStatus, fulfillmentStatus, format (json|csv)
+ */
+router.get('/reports/orders', reportController.getOrders);
 
 export default router;

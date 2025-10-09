@@ -11,6 +11,9 @@ import {
   Chip,
   Divider,
   Button,
+  TextField,
+  Grid,
+  Pagination,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -36,27 +39,54 @@ interface Order {
   orderItems: OrderItem[];
 }
 
+interface PaginationData {
+  total: number;
+  page: number;
+  totalPages: number;
+  limit: number;
+}
+
 const OrdersPage: React.FC = () => {
   const { token } = useAuth();
   const navigate = useNavigate();
 
   const [orders, setOrders] = useState<Order[]>([]);
+  const [pagination, setPagination] = useState<PaginationData>({
+    total: 0,
+    page: 1,
+    totalPages: 1,
+    limit: 20
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const fetchOrders = async () => {
       try {
+        setLoading(true);
+        const params: any = {
+          page: currentPage,
+          limit: 20
+        };
+
+        if (startDate) params.startDate = startDate;
+        if (endDate) params.endDate = endDate;
+
         const response = await axios.get(
           `${import.meta.env.VITE_API_URL}/orders`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
             },
+            params
           }
         );
 
         setOrders(response.data.data);
+        setPagination(response.data.pagination);
       } catch (err: any) {
         console.error('Failed to fetch orders:', err);
         setError(err.response?.data?.message || 'Failed to load orders');
@@ -68,7 +98,7 @@ const OrdersPage: React.FC = () => {
     if (token) {
       fetchOrders();
     }
-  }, [token]);
+  }, [token, currentPage, startDate, endDate]);
 
   if (loading) {
     return (
@@ -94,11 +124,64 @@ const OrdersPage: React.FC = () => {
     );
   }
 
+  const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
+    setCurrentPage(value);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
       <Typography variant="h4" component="h1" gutterBottom>
         My Orders
       </Typography>
+
+      {/* Date Range Filters */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={4}>
+            <TextField
+              label="Start Date"
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                setCurrentPage(1);
+              }}
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+            />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <TextField
+              label="End Date"
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                setCurrentPage(1);
+              }}
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+            />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Button
+              variant="outlined"
+              fullWidth
+              onClick={() => {
+                setStartDate('');
+                setEndDate('');
+                setCurrentPage(1);
+              }}
+            >
+              Clear Filters
+            </Button>
+          </Grid>
+        </Grid>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+          Showing {orders.length} of {pagination.total} orders
+        </Typography>
+      </Paper>
 
       {orders.length === 0 ? (
         <Paper sx={{ p: 4, textAlign: 'center' }}>
@@ -192,6 +275,19 @@ const OrdersPage: React.FC = () => {
               </Card>
             );
           })}
+
+          {/* Pagination */}
+          {pagination.totalPages > 1 && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+              <Pagination
+                count={pagination.totalPages}
+                page={currentPage}
+                onChange={handlePageChange}
+                color="primary"
+                size="large"
+              />
+            </Box>
+          )}
         </Box>
       )}
     </Container>

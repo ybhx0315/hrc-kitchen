@@ -196,9 +196,40 @@ export class OrderService {
     return order;
   }
 
-  async getUserOrders(userId: string): Promise<any[]> {
+  async getUserOrders(
+    userId: string,
+    options?: {
+      startDate?: string;
+      endDate?: string;
+      page?: number;
+      limit?: number;
+    }
+  ): Promise<{ orders: any[]; total: number; page: number; totalPages: number }> {
+    const { startDate, endDate, page = 1, limit = 20 } = options || {};
+
+    // Build where clause
+    const where: any = { userId };
+
+    // Add date range filter
+    if (startDate || endDate) {
+      where.orderDate = {};
+      if (startDate) {
+        where.orderDate.gte = new Date(startDate + 'T00:00:00');
+      }
+      if (endDate) {
+        where.orderDate.lte = new Date(endDate + 'T23:59:59');
+      }
+    }
+
+    // Calculate pagination
+    const skip = (page - 1) * limit;
+
+    // Get total count for pagination
+    const total = await prisma.order.count({ where });
+
+    // Get orders with pagination
     const orders = await prisma.order.findMany({
-      where: { userId },
+      where,
       include: {
         orderItems: {
           include: {
@@ -220,10 +251,19 @@ export class OrderService {
       },
       orderBy: {
         createdAt: 'desc'
-      }
+      },
+      skip,
+      take: limit
     });
 
-    return orders;
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      orders,
+      total,
+      page,
+      totalPages
+    };
   }
 
   private async generateOrderNumber(): Promise<string> {

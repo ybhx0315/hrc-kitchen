@@ -61,11 +61,27 @@ export class OrderController {
     try {
       const userId = req.user!.id;
 
-      const orders = await this.orderService.getUserOrders(userId);
+      // Extract query parameters
+      const { startDate, endDate, page, limit } = req.query;
+
+      const options = {
+        startDate: startDate as string | undefined,
+        endDate: endDate as string | undefined,
+        page: page ? parseInt(page as string) : undefined,
+        limit: limit ? parseInt(limit as string) : undefined
+      };
+
+      const result = await this.orderService.getUserOrders(userId, options);
 
       res.json({
         success: true,
-        data: orders
+        data: result.orders,
+        pagination: {
+          total: result.total,
+          page: result.page,
+          totalPages: result.totalPages,
+          limit: options.limit || 20
+        }
       });
     } catch (error) {
       console.error('Error fetching user orders:', error);

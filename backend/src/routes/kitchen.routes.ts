@@ -162,4 +162,25 @@ router.get('/stats', authenticate, authorize('KITCHEN', 'ADMIN'), async (req: Re
   }
 });
 
+/**
+ * GET /api/v1/kitchen/print
+ * Get printable HTML for batch summary (kitchen staff only)
+ */
+router.get('/print', authenticate, authorize('KITCHEN', 'ADMIN'), async (req: Request, res: Response) => {
+  try {
+    const { date } = req.query;
+
+    const html = await kitchenService.generatePrintableHTML(date as string | undefined);
+
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  } catch (error: any) {
+    console.error('Error generating printable summary:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to generate printable summary'
+    });
+  }
+});
+
 export default router;
