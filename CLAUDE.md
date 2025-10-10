@@ -19,7 +19,7 @@ HRC Kitchen is a web-based lunch ordering system for Huon Regional Care staff, f
 - Non-technical menu management interface
 
 ## Development Status
-- **Current Phase**: MVP Complete - All Core Features Implemented
+- **Current Phase**: MVP Complete + Guest Checkout Enhancement
 - **Completed**:
   - ✅ Project structure and monorepo setup
   - ✅ Backend API foundation (Node.js/Express/TypeScript)
@@ -87,6 +87,27 @@ HRC Kitchen is a web-based lunch ordering system for Huon Regional Care staff, f
     - Time validation (HH:MM format, end after start)
     - Admin dashboard with tabbed navigation
     - Three-panel interface: Menu Management, User Management, System Config
+  - ✅ **Phase 5 Complete**: Guest Checkout & UX Improvements
+    - **Guest Checkout System**:
+      - Database schema updates: nullable `userId`, added `guestEmail`, `guestFirstName`, `guestLastName` fields
+      - Guest order endpoints (`POST /api/v1/orders/guest`, `GET /api/v1/orders/guest/:id`)
+      - Email existence check to prevent duplicate accounts (409 response with `EMAIL_EXISTS` code)
+      - Guest order support in Kitchen Dashboard with proper display of guest information
+      - Checkout page with conditional guest info form (firstName, lastName, email)
+      - Email validation and duplicate detection with dialog prompt to sign in
+      - Post-purchase account creation dialog on order confirmation page
+      - Cart preservation across login/logout via localStorage
+      - Stripe `receipt_email` integration for guest orders
+    - **Navigation & Routing**:
+      - Menu page set as home page (`/` route)
+      - Logout redirects to home (menu) instead of login page
+      - 404 Not Found page with 5-second countdown and auto-redirect to home
+      - Catch-all route handler for undefined paths
+      - Removed duplicate Container wrapper from App.tsx for consistent layout
+    - **Menu Access**:
+      - Menu routes made public (no authentication required)
+      - Guest users can browse menu and add items to cart
+      - Login optional for ordering (supports guest checkout)
 
 - **Next Steps** (Optional Enhancements):
   1. Email notifications for order status updates
@@ -122,6 +143,9 @@ npm run dev  # Starts both backend (port 3000) and frontend (port 5173)
   - Validates ordering windows (8:00 AM - 10:30 AM on weekdays)
   - Generates unique order numbers (format: ORD-YYYYMMDD-####)
   - Stores customizations and special requests as JSON
+  - `createOrderInternal()` - Internal method for order creation (used by both authenticated and guest flows)
+  - `createGuestOrder()` - Guest order creation with guest information
+  - `getGuestOrderById()` - Retrieve guest orders without authentication
 
 - **Kitchen Service** (`backend/src/services/kitchen.service.ts`):
   - `getOrders()` - Fetch orders with filters (date, status, menu item)
@@ -164,12 +188,16 @@ npm run dev  # Starts both backend (port 3000) and frontend (port 5173)
 
 ### Frontend Architecture
 - **Pages**:
+  - `/` - Home page (MenuPage)
   - `/menu` - Browse daily menu with cart functionality
-  - `/checkout` - Stripe Elements payment form
-  - `/order-confirmation/:orderId` - Order success page
-  - `/orders` - Order history with status tracking
+  - `/checkout` - Stripe Elements payment form with guest checkout support
+  - `/order-confirmation/:orderId` - Order success page with optional account creation
+  - `/orders` - Order history with status tracking (authenticated users only)
   - `/kitchen` - Kitchen dashboard (KITCHEN/ADMIN only)
   - `/admin` - Admin dashboard (ADMIN only)
+  - `/login` - Login page with redirect support
+  - `/register` - Registration page
+  - `*` (404) - Not Found page with auto-redirect to home
 
 - **Kitchen Dashboard Features** (`/kitchen`):
   - **Two View Modes**:
@@ -242,14 +270,28 @@ npm run dev  # Starts both backend (port 3000) and frontend (port 5173)
   - Local component state for kitchen dashboard collapse/expand
 
 ### Data Flow
+
+**Authenticated User Flow:**
 1. User browses menu and adds items to cart (with customizations and variations)
 2. Variation selector shows available options with dynamic price calculation
 3. Cart persisted to localStorage with selected variations
-4. Checkout creates order and Stripe PaymentIntent with variation data
+4. Checkout creates order and Stripe PaymentIntent with user ID
 5. User enters card details via Stripe Elements
 6. Payment confirmed → Order status updated → Redirect to confirmation
-7. Kitchen dashboard displays orders with variation selections as chips
-8. User can view order history and details with variations
+7. User can view order history and details with variations
+8. Kitchen dashboard displays orders with user information and variation selections
+
+**Guest User Flow:**
+1. Guest browses menu without login and adds items to cart
+2. Cart persisted to localStorage (survives across login/logout)
+3. At checkout, guest enters firstName, lastName, and email
+4. System checks if email already exists:
+   - If exists: Shows dialog prompting guest to sign in
+   - If new: Creates guest order with guest information
+5. Checkout creates order and Stripe PaymentIntent with guest email (for receipt)
+6. Payment confirmed → Order status updated → Redirect to confirmation
+7. Order confirmation page offers optional account creation
+8. Kitchen dashboard displays guest orders with guest name and email
 
 ## Development Guidelines
 
@@ -265,3 +307,35 @@ npm run dev  # Starts both backend (port 3000) and frontend (port 5173)
 - Backend API documentation follows RESTful conventions at `/api/v1/*`
 - Stripe test mode enabled - use test cards for payment testing
 - Use Stripe test card: `4242 4242 4242 4242`, any future expiry, any CVC
+
+## Database Schema Changes (Phase 5)
+
+### Order Model Updates
+Added support for guest orders with nullable user relationship:
+
+```prisma
+model Order {
+  userId            String?       @map("user_id")
+  guestEmail        String?       @map("guest_email")
+  guestFirstName    String?       @map("guest_first_name")
+  guestLastName     String?       @map("guest_last_name")
+  user              User?         @relation(fields: [userId], references: [id])
+
+  @@index([guestEmail])
+}
+```
+
+**Migration**: `20251009000000_add_guest_checkout_support.sql`
+
+## API Endpoints (Phase 5)
+
+### Guest Order Endpoints
+- `POST /api/v1/orders/guest` - Create guest order (no authentication required)
+  - Request body: `{ items, deliveryNotes, guestInfo: { firstName, lastName, email } }`
+  - Returns: `{ order, clientSecret }` or `409` if email exists
+- `GET /api/v1/orders/guest/:id` - Retrieve guest order by ID (no authentication required)
+
+### Updated Menu Endpoints
+- `GET /api/v1/menu/today` - Public access (no authentication)
+- `GET /api/v1/menu/week` - Public access (no authentication)
+- `GET /api/v1/menu/items/:id` - Public access (no authentication)

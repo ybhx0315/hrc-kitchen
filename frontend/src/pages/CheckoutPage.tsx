@@ -12,6 +12,10 @@ import {
   ListItemText,
   Alert,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
@@ -24,7 +28,7 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 
 
 const CheckoutForm: React.FC = () => {
   const { items, clearCart, getCartTotal, calculateItemPrice } = useCart();
-  const { token } = useAuth();
+  const { token, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const stripe = useStripe();
   const elements = useElements();
@@ -33,6 +37,14 @@ const CheckoutForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Guest checkout fields
+  const [guestFirstName, setGuestFirstName] = useState('');
+  const [guestLastName, setGuestLastName] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
+
+  // Email exists dialog
+  const [showEmailExistsDialog, setShowEmailExistsDialog] = useState(false);
+
   const cartTotal = getCartTotal();
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -40,6 +52,18 @@ const CheckoutForm: React.FC = () => {
 
     if (!stripe || !elements) {
       return;
+    }
+
+    // Validate guest info if not authenticated
+    if (!isAuthenticated) {
+      if (!guestFirstName || !guestLastName || !guestEmail) {
+        setError('Please fill in all guest information fields');
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail)) {
+        setError('Please enter a valid email address');
+        return;
+      }
     }
 
     setLoading(true);
@@ -58,15 +82,32 @@ const CheckoutForm: React.FC = () => {
         deliveryNotes: deliveryNotes || undefined,
       };
 
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/orders`,
-        orderData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      let response;
+      if (isAuthenticated) {
+        // Authenticated order
+        response = await axios.post(
+          `${import.meta.env.VITE_API_URL}/orders`,
+          orderData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+      } else {
+        // Guest order
+        response = await axios.post(
+          `${import.meta.env.VITE_API_URL}/orders/guest`,
+          {
+            ...orderData,
+            guestInfo: {
+              firstName: guestFirstName,
+              lastName: guestLastName,
+              email: guestEmail,
+            },
+          }
+        );
+      }
 
       const { order, clientSecret } = response.data.data;
 
@@ -90,14 +131,32 @@ const CheckoutForm: React.FC = () => {
       if (paymentIntent?.status === 'succeeded') {
         // Payment successful
         clearCart();
-        navigate(`/order-confirmation/${order.id}`);
+        navigate(`/order-confirmation/${order.id}`, {
+          state: {
+            isGuest: !isAuthenticated,
+            guestEmail: guestEmail || undefined,
+            guestName: `${guestFirstName} ${guestLastName}` || undefined
+          }
+        });
       }
     } catch (err: any) {
       console.error('Checkout error:', err);
-      setError(err.response?.data?.message || err.message || 'Payment failed. Please try again.');
+
+      // Check if error is due to existing email
+      if (err.response?.data?.code === 'EMAIL_EXISTS') {
+        setShowEmailExistsDialog(true);
+        setError(null);
+      } else {
+        setError(err.response?.data?.message || err.message || 'Payment failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSignInFromDialog = () => {
+    setShowEmailExistsDialog(false);
+    navigate('/login', { state: { from: '/checkout' } });
   };
 
   if (items.length === 0) {
@@ -198,7 +257,7 @@ const CheckoutForm: React.FC = () => {
 
       <Paper sx={{ p: 3 }}>
         <Typography variant="h6" gutterBottom>
-          Payment Details
+          {!isAuthenticated ? 'Your Information' : 'Payment Details'}
         </Typography>
 
         {error && (
@@ -208,6 +267,64 @@ const CheckoutForm: React.FC = () => {
         )}
 
         <form onSubmit={handleSubmit}>
+          {/* Guest Information Form */}
+          {!isAuthenticated && (
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                Please provide your information to complete the order
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 2 }}>
+                Already have an account?{' '}
+                <Box
+                  component="span"
+                  onClick={() => navigate('/login', { state: { from: '/checkout' } })}
+                  sx={{
+                    color: 'primary.main',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    fontWeight: 500,
+                    '&:hover': {
+                      color: 'primary.dark',
+                    }
+                  }}
+                >
+                  Sign In
+                </Box>
+              </Typography>
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mb: 2 }}>
+                <TextField
+                  required
+                  label="First Name"
+                  value={guestFirstName}
+                  onChange={(e) => setGuestFirstName(e.target.value)}
+                  disabled={loading}
+                />
+                <TextField
+                  required
+                  label="Last Name"
+                  value={guestLastName}
+                  onChange={(e) => setGuestLastName(e.target.value)}
+                  disabled={loading}
+                />
+              </Box>
+              <TextField
+                required
+                fullWidth
+                type="email"
+                label="Email Address"
+                value={guestEmail}
+                onChange={(e) => setGuestEmail(e.target.value)}
+                disabled={loading}
+                helperText="You'll receive order confirmation and receipt at this email"
+                sx={{ mb: 2 }}
+              />
+              <Divider sx={{ my: 2 }} />
+              <Typography variant="h6" gutterBottom>
+                Payment Details
+              </Typography>
+            </Box>
+          )}
+
           <Box sx={{ mb: 3, p: 2, border: '1px solid #ccc', borderRadius: 1 }}>
             <CardElement
               options={{
@@ -254,6 +371,25 @@ const CheckoutForm: React.FC = () => {
           Your payment information is securely processed by Stripe
         </Typography>
       </Box>
+
+      {/* Email Exists Dialog */}
+      <Dialog open={showEmailExistsDialog} onClose={() => setShowEmailExistsDialog(false)}>
+        <DialogTitle>Account Already Exists</DialogTitle>
+        <DialogContent>
+          <Typography>
+            An account with the email <strong>{guestEmail}</strong> already exists.
+            Please sign in to continue with your order.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowEmailExistsDialog(false)}>
+            Cancel
+          </Button>
+          <Button variant="contained" onClick={handleSignInFromDialog}>
+            Sign In
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

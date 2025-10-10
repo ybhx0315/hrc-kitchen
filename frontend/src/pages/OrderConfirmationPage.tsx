@@ -12,8 +12,13 @@ import {
   ListItemText,
   Divider,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
 } from '@mui/material';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import axios from 'axios';
@@ -45,26 +50,53 @@ interface Order {
 
 const OrderConfirmationPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
-  const { token } = useAuth();
+  const { token, isAuthenticated, login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Guest checkout state from navigation
+  const isGuest = location.state?.isGuest || false;
+  const guestEmail = location.state?.guestEmail;
+  const guestName = location.state?.guestName;
+
+  // Account creation dialog
+  const [showAccountDialog, setShowAccountDialog] = useState(false);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [accountError, setAccountError] = useState<string | null>(null);
+  const [accountLoading, setAccountLoading] = useState(false);
+
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_URL}/orders/${orderId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        let response;
+        if (isAuthenticated) {
+          // Authenticated user
+          response = await axios.get(
+            `${import.meta.env.VITE_API_URL}/orders/${orderId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+        } else {
+          // Guest order
+          response = await axios.get(
+            `${import.meta.env.VITE_API_URL}/orders/guest/${orderId}`
+          );
+        }
 
         setOrder(response.data.data);
+
+        // Show account creation dialog for guests after successful order fetch
+        if (isGuest && guestEmail) {
+          setShowAccountDialog(true);
+        }
       } catch (err: any) {
         console.error('Failed to fetch order:', err);
         setError(err.response?.data?.message || 'Failed to load order details');
@@ -73,10 +105,55 @@ const OrderConfirmationPage: React.FC = () => {
       }
     };
 
-    if (orderId && token) {
+    if (orderId) {
       fetchOrder();
     }
-  }, [orderId, token]);
+  }, [orderId, token, isAuthenticated, isGuest, guestEmail]);
+
+  const handleCreateAccount = async () => {
+    if (!password || !confirmPassword) {
+      setAccountError('Please fill in all fields');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setAccountError('Passwords do not match');
+      return;
+    }
+
+    if (password.length < 8) {
+      setAccountError('Password must be at least 8 characters');
+      return;
+    }
+
+    setAccountLoading(true);
+    setAccountError(null);
+
+    try {
+      // Extract first and last name
+      const [firstName = '', ...lastNameParts] = (guestName || '').split(' ');
+      const lastName = lastNameParts.join(' ') || '';
+
+      // Register the account
+      await axios.post(`${import.meta.env.VITE_API_URL}/auth/register`, {
+        email: guestEmail,
+        password,
+        fullName: guestName || `${firstName} ${lastName}`.trim(),
+      });
+
+      // Auto-login
+      await login(guestEmail!, password);
+
+      setShowAccountDialog(false);
+      // Show success message
+      alert('Account created successfully! You are now logged in.');
+    } catch (err: any) {
+      console.error('Account creation failed:', err);
+      setAccountError(err.response?.data?.message || 'Failed to create account');
+    } finally {
+      setAccountLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -226,11 +303,66 @@ const OrderConfirmationPage: React.FC = () => {
           <Button variant="outlined" onClick={() => navigate('/menu')}>
             Order Again
           </Button>
-          <Button variant="contained" onClick={() => navigate('/orders')}>
-            View All Orders
-          </Button>
+          {isAuthenticated && (
+            <Button variant="contained" onClick={() => navigate('/orders')}>
+              View All Orders
+            </Button>
+          )}
         </Box>
       </Paper>
+
+      {/* Account Creation Dialog for Guests */}
+      <Dialog open={showAccountDialog} onClose={() => setShowAccountDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Create an Account</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Save time on future orders! Create an account to skip entering your information next time.
+          </Typography>
+
+          {accountError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {accountError}
+            </Alert>
+          )}
+
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            <strong>Email:</strong> {guestEmail}
+          </Typography>
+
+          <TextField
+            fullWidth
+            type="password"
+            label="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={accountLoading}
+            helperText="Minimum 8 characters"
+            sx={{ mb: 2, mt: 2 }}
+          />
+
+          <TextField
+            fullWidth
+            type="password"
+            label="Confirm Password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            disabled={accountLoading}
+            sx={{ mb: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowAccountDialog(false)} disabled={accountLoading}>
+            Skip for Now
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleCreateAccount}
+            disabled={accountLoading}
+          >
+            {accountLoading ? <CircularProgress size={24} /> : 'Create Account'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

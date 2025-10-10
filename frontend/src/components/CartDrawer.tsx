@@ -129,7 +129,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ open, onClose }) => {
                     )}
 
                     {/* Customizations (Legacy) */}
-                    {item.customizations.length > 0 && (
+                    {item.customizations && item.customizations.length > 0 && (
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
                         {item.customizations.map((custom, index) => (
                           <Chip key={index} label={custom} size="small" variant="outlined" />

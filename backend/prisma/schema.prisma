@@ -142,7 +142,10 @@ model VariationOption {
 
 model Order {
   id                String        @id @default(uuid())
-  userId            String        @map("user_id")
+  userId            String?       @map("user_id")
+  guestEmail        String?       @map("guest_email")
+  guestFirstName    String?       @map("guest_first_name")
+  guestLastName     String?       @map("guest_last_name")
   orderNumber       String        @unique @map("order_number")
   totalAmount       Decimal       @db.Decimal(10, 2) @map("total_amount")
   paymentStatus     PaymentStatus @default(PENDING) @map("payment_status")
@@ -154,10 +157,11 @@ model Order {
   updatedAt         DateTime      @updatedAt @map("updated_at")
 
   // Relations
-  user              User          @relation(fields: [userId], references: [id])
+  user              User?         @relation(fields: [userId], references: [id])
   orderItems        OrderItem[]
 
   @@index([userId])
+  @@index([guestEmail])
   @@index([orderDate])
   @@index([fulfillmentStatus])
   @@map("orders")

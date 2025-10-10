@@ -160,7 +160,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   };
 
   const getCartItemCount = () => {
-    return items.reduce((count, item) => count + item.quantity, 0);
+    return items.reduce((count, item) => count + (Number(item.quantity) || 0), 0);
   };
 
   const value: CartContextType = {

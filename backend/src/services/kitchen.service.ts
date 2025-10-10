@@ -141,7 +141,7 @@ export class KitchenService {
           quantity: item.quantity,
           customizations: item.customizations,
           selectedVariations: item.selectedVariations,
-          customerName: order.user.fullName,
+          customerName: order.user?.fullName || `${order.guestFirstName} ${order.guestLastName}` || 'Guest',
           fulfillmentStatus: order.fulfillmentStatus
         });
       }

@@ -5,10 +5,14 @@ import { authenticate } from '../middleware/auth';
 const router = Router();
 const orderController = new OrderController();
 
-// All order routes require authentication
+// Guest order endpoints (no authentication required)
+router.post('/guest', orderController.createGuestOrder);
+router.get('/guest/:id', orderController.getGuestOrder);
+
+// Authenticated order routes
 router.use(authenticate);
 
-// Create new order
+// Create new order (authenticated)
 router.post('/', orderController.createOrder);
 
 // Get user's orders

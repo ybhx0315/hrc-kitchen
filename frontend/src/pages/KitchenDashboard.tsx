@@ -46,7 +46,10 @@ interface Order {
   user: {
     fullName: string;
     email: string;
-  };
+  } | null;
+  guestEmail?: string | null;
+  guestFirstName?: string | null;
+  guestLastName?: string | null;
   orderItems: Array<{
     id: string;
     quantity: number;
@@ -853,7 +856,10 @@ const KitchenDashboard = () => {
                             <Box>
                               <Typography variant="h6">{order.orderNumber}</Typography>
                               <Typography variant="body2" color="text.secondary">
-                                {order.user.fullName} ({order.user.email})
+                                {order.user
+                                  ? `${order.user.fullName} (${order.user.email})`
+                                  : `${order.guestFirstName} ${order.guestLastName} (${order.guestEmail}) - Guest`
+                                }
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
                                 {new Date(order.createdAt).toLocaleTimeString()}

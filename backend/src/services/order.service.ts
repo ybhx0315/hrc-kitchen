@@ -12,6 +12,35 @@ export class OrderService {
   }
 
   async createOrder(userId: string, orderData: CreateOrderDto): Promise<{ order: any; clientSecret: string }> {
+    // Get user email for payment intent
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true }
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return this.createOrderInternal(orderData, { userId, customerEmail: user.email });
+  }
+
+  async createGuestOrder(
+    orderData: CreateOrderDto,
+    guestInfo: { email: string; firstName: string; lastName: string }
+  ): Promise<{ order: any; clientSecret: string }> {
+    return this.createOrderInternal(orderData, {
+      guestEmail: guestInfo.email,
+      guestFirstName: guestInfo.firstName,
+      guestLastName: guestInfo.lastName,
+      customerEmail: guestInfo.email
+    });
+  }
+
+  private async createOrderInternal(
+    orderData: CreateOrderDto,
+    customerInfo: { userId?: string; guestEmail?: string; guestFirstName?: string; guestLastName?: string; customerEmail: string }
+  ): Promise<{ order: any; clientSecret: string }> {
     // Validate ordering window
     const windowStatus = await this.configService.isOrderingWindowActive();
     if (!windowStatus.active) {
@@ -111,22 +140,12 @@ export class OrderService {
     // Build special requests string
     const specialRequests = orderData.deliveryNotes || null;
 
-    // Get user email for payment intent
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { email: true }
-    });
-
-    if (!user) {
-      throw new Error('User not found');
-    }
-
     // Create order with payment in a transaction
     const result = await prisma.$transaction(async (tx) => {
       // Create payment intent with Stripe first
       const paymentIntent = await PaymentService.createPaymentIntent({
         amount: totalAmount,
-        customerEmail: user.email,
+        customerEmail: customerInfo.customerEmail,
         orderId: undefined // We don't have the orderId yet
       });
 
@@ -134,7 +153,10 @@ export class OrderService {
       const order = await tx.order.create({
         data: {
           orderNumber,
-          userId,
+          userId: customerInfo.userId || null,
+          guestEmail: customerInfo.guestEmail || null,
+          guestFirstName: customerInfo.guestFirstName || null,
+          guestLastName: customerInfo.guestLastName || null,
           totalAmount,
           paymentStatus: 'PENDING',
           fulfillmentStatus: 'PLACED',
@@ -171,6 +193,36 @@ export class OrderService {
       where: {
         id: orderId,
         userId
+      },
+      include: {
+        orderItems: {
+          include: {
+            menuItem: {
+              select: {
+                name: true,
+                description: true,
+                imageUrl: true,
+                price: true,
+                variationGroups: {
+                  include: {
+                    options: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    return order;
+  }
+
+  async getGuestOrderById(orderId: string): Promise<any | null> {
+    const order = await prisma.order.findFirst({
+      where: {
+        id: orderId,
+        userId: null // Guest orders only
       },
       include: {
         orderItems: {

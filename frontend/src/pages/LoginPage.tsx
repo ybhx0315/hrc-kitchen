@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Box, Paper, TextField, Button, Typography, Alert } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -11,6 +11,10 @@ const LoginPage = () => {
 
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Get the redirect path from location state (e.g., from checkout page)
+  const from = (location.state as any)?.from || '/menu';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +23,8 @@ const LoginPage = () => {
 
     try {
       await login(email, password);
-      navigate('/menu');
+      // Redirect back to the page they came from (e.g., checkout)
+      navigate(from);
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Login failed. Please try again.');
     } finally {

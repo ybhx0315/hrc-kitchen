@@ -1,28 +1,27 @@
 import { Router } from 'express';
 import menuController from '../controllers/menu.controller';
-import { authenticate } from '../middleware/auth';
 
 const router = Router();
 
 /**
  * @route   GET /api/v1/menu/today
  * @desc    Get today's menu items
- * @access  Private (authenticated users)
+ * @access  Public (no authentication required for guest checkout)
  */
-router.get('/today', authenticate, menuController.getTodaysMenu);
+router.get('/today', menuController.getTodaysMenu);
 
 /**
  * @route   GET /api/v1/menu/week
  * @desc    Get full weekly menu
- * @access  Private (admin only - to be added)
+ * @access  Public (no authentication required for guest checkout)
  */
-router.get('/week', authenticate, menuController.getWeeklyMenu);
+router.get('/week', menuController.getWeeklyMenu);
 
 /**
  * @route   GET /api/v1/menu/items/:id
  * @desc    Get single menu item by ID
- * @access  Private (authenticated users)
+ * @access  Public (no authentication required for guest checkout)
  */
-router.get('/items/:id', authenticate, menuController.getMenuItem);
+router.get('/items/:id', menuController.getMenuItem);
 
 export default router;
