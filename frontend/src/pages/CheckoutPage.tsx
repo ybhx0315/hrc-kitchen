@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Paper,
@@ -21,7 +21,8 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { loadStripe } from '@stripe/stripe-js';
-import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { Elements, CardElement, useStripe, useElements, PaymentRequestButtonElement } from '@stripe/react-stripe-js';
+import type { PaymentRequest } from '@stripe/stripe-js';
 import axios from 'axios';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
@@ -45,7 +46,145 @@ const CheckoutForm: React.FC = () => {
   // Email exists dialog
   const [showEmailExistsDialog, setShowEmailExistsDialog] = useState(false);
 
+  // Payment Request Button (Apple Pay / Google Pay)
+  const [paymentRequest, setPaymentRequest] = useState<PaymentRequest | null>(null);
+  const [canMakePayment, setCanMakePayment] = useState(false);
+
   const cartTotal = getCartTotal();
+
+  // Initialize Payment Request Button for Apple Pay / Google Pay
+  useEffect(() => {
+    if (!stripe) {
+      return;
+    }
+
+    const pr = stripe.paymentRequest({
+      country: 'AU',
+      currency: 'aud',
+      total: {
+        label: 'HRC Kitchen Order',
+        amount: Math.round(cartTotal * 100), // Convert to cents
+      },
+      requestPayerName: !isAuthenticated,
+      requestPayerEmail: !isAuthenticated,
+    });
+
+    // Check if browser supports Apple Pay or Google Pay
+    pr.canMakePayment().then((result) => {
+      console.log('Payment Request canMakePayment result:', result);
+      if (result) {
+        setPaymentRequest(pr);
+        setCanMakePayment(true);
+      } else {
+        console.log('Apple Pay/Google Pay not available on this device/browser');
+      }
+    });
+
+    // Handle payment method
+    pr.on('paymentmethod', async (event) => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        // For guest checkout, extract payer info from payment request
+        const payerEmail = event.payerEmail || guestEmail;
+        const payerName = event.payerName || '';
+        const [firstName, ...lastNameParts] = payerName.split(' ');
+        const lastName = lastNameParts.join(' ');
+
+        // Validate guest info for payment request
+        if (!isAuthenticated) {
+          if (!payerEmail || !firstName) {
+            event.complete('fail');
+            setError('Payment method must provide name and email for guest checkout');
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Create order and get payment intent
+        const orderData = {
+          items: items.map(item => ({
+            menuItemId: item.menuItem.id,
+            quantity: item.quantity,
+            customizations: item.customizations.join(', '),
+            specialRequests: item.specialRequests,
+            selectedVariations: item.selectedVariations || [],
+          })),
+          deliveryNotes: deliveryNotes || undefined,
+        };
+
+        let response;
+        if (isAuthenticated) {
+          // Authenticated order
+          response = await axios.post(
+            `${import.meta.env.VITE_API_URL}/orders`,
+            orderData,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+        } else {
+          // Guest order
+          response = await axios.post(
+            `${import.meta.env.VITE_API_URL}/orders/guest`,
+            {
+              ...orderData,
+              guestInfo: {
+                firstName: firstName || guestFirstName,
+                lastName: lastName || guestLastName,
+                email: payerEmail,
+              },
+            }
+          );
+        }
+
+        const { order, clientSecret } = response.data.data;
+
+        // Confirm payment with Stripe
+        const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
+          clientSecret,
+          { payment_method: event.paymentMethod.id },
+          { handleActions: false }
+        );
+
+        if (confirmError) {
+          event.complete('fail');
+          throw new Error(confirmError.message);
+        }
+
+        if (paymentIntent?.status === 'succeeded') {
+          event.complete('success');
+          clearCart();
+          navigate(`/order-confirmation/${order.id}`, {
+            state: {
+              isGuest: !isAuthenticated,
+              guestEmail: payerEmail,
+              guestName: payerName || `${guestFirstName} ${guestLastName}`
+            }
+          });
+        } else {
+          event.complete('fail');
+          throw new Error('Payment did not succeed');
+        }
+      } catch (err: any) {
+        console.error('Payment Request error:', err);
+        event.complete('fail');
+
+        // Check if error is due to existing email
+        if (err.response?.data?.code === 'EMAIL_EXISTS') {
+          setShowEmailExistsDialog(true);
+          setError(null);
+        } else {
+          setError(err.response?.data?.message || err.message || 'Payment failed. Please try again.');
+        }
+      } finally {
+        setLoading(false);
+      }
+    });
+  }, [stripe, cartTotal, isAuthenticated, items, deliveryNotes, token, navigate, clearCart, guestFirstName, guestLastName, guestEmail]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -325,6 +464,31 @@ const CheckoutForm: React.FC = () => {
             </Box>
           )}
 
+          {/* Apple Pay / Google Pay Button */}
+          {canMakePayment && paymentRequest && (
+            <Box sx={{ mb: 3 }}>
+              <PaymentRequestButtonElement
+                options={{
+                  paymentRequest,
+                  style: {
+                    paymentRequestButton: {
+                      type: 'default',
+                      theme: 'dark',
+                      height: '48px',
+                    },
+                  },
+                }}
+              />
+              <Box sx={{ display: 'flex', alignItems: 'center', my: 2 }}>
+                <Divider sx={{ flex: 1 }} />
+                <Typography variant="body2" sx={{ px: 2, color: 'text.secondary' }}>
+                  OR PAY WITH CARD
+                </Typography>
+                <Divider sx={{ flex: 1 }} />
+              </Box>
+            </Box>
+          )}
+
           <Box sx={{ mb: 3, p: 2, border: '1px solid #ccc', borderRadius: 1 }}>
             <CardElement
               options={{
@@ -395,8 +559,26 @@ const CheckoutForm: React.FC = () => {
 };
 
 const CheckoutPage: React.FC = () => {
+  // Stripe Elements appearance configuration for better integration
+  const appearance = {
+    theme: 'stripe' as const,
+    variables: {
+      colorPrimary: '#1976d2',
+      colorBackground: '#ffffff',
+      colorText: '#30313d',
+      colorDanger: '#df1b41',
+      fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+      spacingUnit: '4px',
+      borderRadius: '4px',
+    },
+  };
+
+  const options = {
+    appearance,
+  };
+
   return (
-    <Elements stripe={stripePromise}>
+    <Elements stripe={stripePromise} options={options}>
       <CheckoutForm />
     </Elements>
   );

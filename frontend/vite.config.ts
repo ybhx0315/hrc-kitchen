@@ -11,7 +11,9 @@ export default defineConfig({
     },
   },
   server: {
+    host: '0.0.0.0', // Listen on all network interfaces (safe for dev - allows local network + ngrok)
     port: 5173,
+    allowedHosts: ['.ngrok-free.dev', '.ngrok.io'], // Allow ngrok hosts for testing (dev only)
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
@@ -19,4 +21,6 @@ export default defineConfig({
       },
     },
   },
+  // Note: In production build, these server settings don't apply
+  // You'll serve static files via a web server (Nginx, Vercel, etc.)
 });

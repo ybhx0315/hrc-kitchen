@@ -19,8 +19,44 @@ app.use(helmet({
   contentSecurityPolicy: false, // Disable CSP as it conflicts with Vite dev server
   crossOriginResourcePolicy: { policy: "cross-origin" },
 })); // Security headers
+// CORS configuration
+const isDevelopment = process.env.NODE_ENV !== 'production';
+
+const allowedOrigins = isDevelopment
+  ? [
+      // Development origins
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'http://192.168.0.9:5173', // Local network access
+      /^https:\/\/.*\.ngrok-free\.dev$/, // ngrok HTTPS tunnels
+      /^https:\/\/.*\.ngrok\.io$/, // ngrok HTTPS tunnels (alternative)
+    ]
+  : [
+      // Production origins - IMPORTANT: Replace with your actual production domain
+      process.env.FRONTEND_URL || 'https://your-production-domain.com',
+    ];
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    // Check if origin matches allowed patterns
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (typeof allowed === 'string') {
+        return origin === allowed;
+      } else {
+        return allowed.test(origin);
+      }
+    });
+
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      logger.warn(`CORS blocked request from origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 

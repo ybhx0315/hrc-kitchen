@@ -19,7 +19,7 @@ HRC Kitchen is a web-based lunch ordering system for Huon Regional Care staff, f
 - Non-technical menu management interface
 
 ## Development Status
-- **Current Phase**: MVP Complete + Multi-Weekday Menu Support
+- **Current Phase**: MVP Complete + Apple Pay/Google Pay Integration
 - **Completed**:
   - ✅ Project structure and monorepo setup
   - ✅ Backend API foundation (Node.js/Express/TypeScript)
@@ -44,9 +44,18 @@ HRC Kitchen is a web-based lunch ordering system for Huon Regional Care staff, f
     - Order service with transaction handling and Stripe integration
     - Ordering window validation
     - Checkout page with Stripe Elements card payment form
+    - **Apple Pay & Google Pay Integration**:
+      - Stripe Payment Request Button API implementation
+      - Automatic detection of device/browser capabilities
+      - Apple Pay support on Safari (macOS/iOS)
+      - Google Pay support on Chrome (desktop with account, Android)
+      - Unified payment flow for card, Apple Pay, and Google Pay
+      - Guest checkout support with payment method info extraction
+      - HTTPS requirement for desktop browsers (works with ngrok for testing)
+      - Material-UI themed appearance configuration
     - Order confirmation page with order details
     - Orders history page listing all user orders
-    - End-to-end tested: Menu → Cart → Checkout → Payment → Confirmation → Order History
+    - End-to-end tested: Menu → Cart → Checkout → Payment (Card/Apple Pay/Google Pay) → Confirmation → Order History
   - ✅ **Phase 3 Complete**: Kitchen Dashboard for order management
     - Kitchen API endpoints (`/api/v1/kitchen/*`)
     - Item-level fulfillment tracking with automatic order status calculation
@@ -141,6 +150,20 @@ After seeding, the following accounts are available:
 npm run dev  # Starts both backend (port 3000) and frontend (port 5173)
 ```
 
+### Testing Apple Pay / Google Pay
+**Development Testing:**
+- **Apple Pay**: Use Safari on macOS/iOS with Apple Pay configured
+- **Google Pay**: Requires HTTPS on desktop Chrome
+  - Option 1: Test on Android device via local network (`http://192.168.0.9:5173`)
+  - Option 2: Use ngrok for HTTPS tunnel (`ngrok http 5173`)
+  - Option 3: Deploy to staging environment with HTTPS (Vercel, Netlify)
+- Payment Request Button automatically detects and shows available payment methods
+- Test card: `4242 4242 4242 4242`, any future expiry, any CVC
+
+**Production:**
+- Works automatically on HTTPS domains
+- No special configuration needed
+
 ## Key Implementation Details
 
 ### Backend Architecture
@@ -166,6 +189,15 @@ npm run dev  # Starts both backend (port 3000) and frontend (port 5173)
   - Payment intents created before order confirmation
   - Webhook handlers for payment status updates
   - Payment IDs stored directly on Order model
+  - Payment Request Button API for Apple Pay/Google Pay
+  - Automatic payment method detection based on device/browser capabilities
+
+- **CORS Configuration** (`backend/src/index.ts`):
+  - Environment-aware CORS policy
+  - Development: Allows localhost, local network (192.168.x.x), and ngrok tunnels
+  - Production: Only allows configured frontend domain (via `FRONTEND_URL` env variable)
+  - Regex-based pattern matching for ngrok URLs
+  - Request origin logging for security monitoring
 
 - **Admin Service** (`backend/src/services/admin.service.ts`):
   - `createMenuItem()` - Create new menu items with dietary tags, customizations, and multiple weekdays
@@ -197,6 +229,11 @@ npm run dev  # Starts both backend (port 3000) and frontend (port 5173)
   - `/` - Home page (MenuPage)
   - `/menu` - Browse daily menu with cart functionality
   - `/checkout` - Stripe Elements payment form with guest checkout support
+    - **Payment Request Button**: Automatically shows Apple Pay/Google Pay when available
+    - Card payment via Stripe Elements
+    - Guest checkout with email validation
+    - Material-UI themed Stripe Elements appearance
+    - Unified payment flow for all payment methods
   - `/order-confirmation/:orderId` - Order success page with optional account creation
   - `/orders` - Order history with status tracking (authenticated users only)
   - `/kitchen` - Kitchen dashboard (KITCHEN/ADMIN only)
@@ -204,6 +241,12 @@ npm run dev  # Starts both backend (port 3000) and frontend (port 5173)
   - `/login` - Login page with redirect support
   - `/register` - Registration page
   - `*` (404) - Not Found page with auto-redirect to home
+
+- **Vite Configuration** (`frontend/vite.config.ts`):
+  - `host: '0.0.0.0'` - Enables local network and ngrok access for development
+  - `allowedHosts` - Permits ngrok tunnel hosts for Apple Pay/Google Pay testing
+  - Development-only settings (ignored in production build)
+  - API proxy to backend (`/api` → `http://localhost:3000`)
 
 - **Kitchen Dashboard Features** (`/kitchen`):
   - **Two View Modes**:
@@ -284,7 +327,9 @@ npm run dev  # Starts both backend (port 3000) and frontend (port 5173)
 2. Variation selector shows available options with dynamic price calculation
 3. Cart persisted to localStorage with selected variations
 4. Checkout creates order and Stripe PaymentIntent with user ID
-5. User enters card details via Stripe Elements
+5. User selects payment method:
+   - **Apple Pay/Google Pay**: One-click payment (if available on device/browser)
+   - **Card**: Enters card details via Stripe Elements
 6. Payment confirmed → Order status updated → Redirect to confirmation
 7. User can view order history and details with variations
 8. Kitchen dashboard displays orders with user information and variation selections
@@ -296,10 +341,20 @@ npm run dev  # Starts both backend (port 3000) and frontend (port 5173)
 4. System checks if email already exists:
    - If exists: Shows dialog prompting guest to sign in
    - If new: Creates guest order with guest information
-5. Checkout creates order and Stripe PaymentIntent with guest email (for receipt)
-6. Payment confirmed → Order status updated → Redirect to confirmation
-7. Order confirmation page offers optional account creation
-8. Kitchen dashboard displays guest orders with guest name and email
+5. Guest selects payment method:
+   - **Apple Pay/Google Pay**: Payment method provides name/email automatically
+   - **Card**: Uses manually entered guest information
+6. Checkout creates order and Stripe PaymentIntent with guest email (for receipt)
+7. Payment confirmed → Order status updated → Redirect to confirmation
+8. Order confirmation page offers optional account creation
+9. Kitchen dashboard displays guest orders with guest name and email
+
+**Payment Request Button (Apple Pay/Google Pay):**
+- Automatically detects browser/device capabilities using `stripe.paymentRequest().canMakePayment()`
+- Shows only when user's device supports Apple Pay or Google Pay
+- Extracts payer name and email from payment method for guest checkout
+- Unified payment flow with same order creation and confirmation process
+- Falls back to card payment if digital wallet not available
 
 ## Development Guidelines
 
@@ -315,6 +370,17 @@ npm run dev  # Starts both backend (port 3000) and frontend (port 5173)
 - Backend API documentation follows RESTful conventions at `/api/v1/*`
 - Stripe test mode enabled - use test cards for payment testing
 - Use Stripe test card: `4242 4242 4242 4242`, any future expiry, any CVC
+
+### Security Notes
+- **CORS**: Environment-aware configuration
+  - Development: Allows localhost, local network, and ngrok for testing
+  - Production: Restricts to configured `FRONTEND_URL` only
+- **Vite Dev Server**: `host: '0.0.0.0'` and `allowedHosts` are development-only
+  - Safe behind home/office router (not exposed to internet)
+  - Settings ignored in production builds (serves static files)
+- **Apple Pay/Google Pay**: Requires HTTPS on desktop browsers
+  - Use ngrok or production deployment for desktop testing
+  - Works on mobile devices over HTTP (local network)
 
 ## Database Schema Changes
 
