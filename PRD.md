@@ -147,7 +147,7 @@ HRC Kitchen is a web-based lunch ordering system designed for Huon Regional Care
 
 **Requirements**:
 - FR-3.1: System supports 5-day menu (Monday-Friday)
-- FR-3.2: Each weekday has unique menu items
+- FR-3.2: Menu items can be assigned to one or multiple weekdays
 - FR-3.3: Menu automatically rotates weekly (Week 1 = Week 2)
 - FR-3.4: Menu items include:
   - Name
@@ -211,7 +211,7 @@ Product variations enable menu items to have structured options with price modif
 - FR-5.2: Administrator can add new menu items
 - FR-5.3: Administrator can edit existing menu items
 - FR-5.4: Administrator can delete menu items
-- FR-5.5: Administrator can assign items to specific weekdays
+- FR-5.5: Administrator can assign items to one or multiple weekdays (checkbox selection)
 - FR-5.6: Administrator can set item availability (active/inactive)
 - FR-5.7: Administrator can define customization options per item
 - FR-5.8: Changes take effect immediately
@@ -526,9 +526,10 @@ email_verified, is_active, created_at, updated_at
 
 #### MenuItems
 ```
-id, name, description, price, category, image_url, weekday (1-5), dietary_tags,
+id, name, description, price, category, image_url, weekdays (array), dietary_tags,
 is_active, created_at, updated_at
 ```
+Note: `weekdays` is an array field allowing items to be assigned to multiple days (e.g., ["MONDAY", "WEDNESDAY", "FRIDAY"])
 
 #### MenuItemCustomizations
 ```
@@ -638,15 +639,16 @@ id, config_key, config_value, updated_at, updated_by
 ### 7.3 Administrator Menu Management
 1. Login to admin panel
 2. Navigate to Menu Management
-3. Select weekday (e.g., Monday)
+3. Select view mode (By Day, By Category, or All Items)
 4. Click "Add New Item"
 5. Fill item details (name, description, price, category)
-6. Upload image (optional)
-7. Add dietary tags
-8. Define customization options
-9. Save item
-10. Preview weekly menu
-11. Publish changes
+6. Select one or more weekdays via checkboxes (at least one required)
+7. Upload image (optional)
+8. Add dietary tags
+9. Define customization options
+10. Save item (item will appear on all selected weekdays)
+11. Preview weekly menu
+12. Publish changes
 
 ### 7.4 Administrator Ordering Window Configuration
 1. Login to admin panel

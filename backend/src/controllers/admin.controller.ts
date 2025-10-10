@@ -16,17 +16,17 @@ export class AdminController {
         description,
         price,
         category,
-        weekday,
+        weekdays,
         imageUrl,
         dietaryTags,
         isActive = true,
       } = req.body;
 
       // Validation
-      if (!name || !price || !category || !weekday) {
+      if (!name || !price || !category || !weekdays || !Array.isArray(weekdays) || weekdays.length === 0) {
         return res.status(400).json({
           success: false,
-          message: 'Missing required fields: name, price, category, weekday',
+          message: 'Missing required fields: name, price, category, weekdays (must be non-empty array)',
         });
       }
 
@@ -35,7 +35,7 @@ export class AdminController {
         description: description || '',
         price: parseFloat(price),
         category: category as Category,
-        weekday: weekday as Weekday,
+        weekdays: weekdays as Weekday[],
         imageUrl,
         dietaryTags: dietaryTags || [],
         isActive,

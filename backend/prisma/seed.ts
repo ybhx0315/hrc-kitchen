@@ -81,13 +81,13 @@ async function main() {
 
   // Create sample menu items for all weekdays
   const menuItems = [
-    // MONDAY
+    // Items available multiple days
     {
       name: 'Grilled Chicken Caesar Salad',
       description: 'Fresh romaine lettuce, grilled chicken, parmesan, croutons, Caesar dressing',
       price: 12.50,
       category: MenuCategory.MAIN,
-      weekday: Weekday.MONDAY,
+      weekdays: [Weekday.MONDAY, Weekday.WEDNESDAY, Weekday.FRIDAY],
       dietaryTags: ['Gluten-Free-Optional'],
     },
     {
@@ -95,7 +95,7 @@ async function main() {
       description: 'Traditional Italian lasagna with ground beef, cheese, and tomato sauce',
       price: 14.00,
       category: MenuCategory.MAIN,
-      weekday: Weekday.MONDAY,
+      weekdays: [Weekday.MONDAY, Weekday.THURSDAY],
       dietaryTags: [],
     },
     {
@@ -103,7 +103,7 @@ async function main() {
       description: 'Mixed vegetables with tofu in a savory sauce, served with rice',
       price: 11.00,
       category: MenuCategory.MAIN,
-      weekday: Weekday.MONDAY,
+      weekdays: [Weekday.MONDAY, Weekday.TUESDAY],
       dietaryTags: ['Vegetarian', 'Vegan-Optional'],
     },
     {
@@ -111,7 +111,7 @@ async function main() {
       description: 'Mixed greens, tomatoes, cucumbers, carrots with your choice of dressing',
       price: 5.00,
       category: MenuCategory.SIDE,
-      weekday: Weekday.MONDAY,
+      weekdays: [Weekday.MONDAY, Weekday.TUESDAY, Weekday.WEDNESDAY, Weekday.THURSDAY, Weekday.FRIDAY],
       dietaryTags: ['Vegetarian', 'Vegan', 'Gluten-Free'],
     },
     {
@@ -119,7 +119,7 @@ async function main() {
       description: 'Refreshing sparkling mineral water',
       price: 3.00,
       category: MenuCategory.DRINK,
-      weekday: Weekday.MONDAY,
+      weekdays: [Weekday.MONDAY, Weekday.TUESDAY, Weekday.WEDNESDAY, Weekday.THURSDAY, Weekday.FRIDAY],
       dietaryTags: ['Vegan', 'Gluten-Free'],
     },
     // TUESDAY
@@ -128,7 +128,7 @@ async function main() {
       description: 'Grilled salmon with teriyaki glaze, served with rice and steamed vegetables',
       price: 15.00,
       category: MenuCategory.MAIN,
-      weekday: Weekday.TUESDAY,
+      weekdays: [Weekday.TUESDAY, Weekday.THURSDAY],
       dietaryTags: ['Gluten-Free-Optional'],
     },
     {
@@ -136,7 +136,7 @@ async function main() {
       description: 'Breaded chicken breast with marinara sauce and melted mozzarella',
       price: 13.50,
       category: MenuCategory.MAIN,
-      weekday: Weekday.TUESDAY,
+      weekdays: [Weekday.TUESDAY],
       dietaryTags: [],
     },
     {
@@ -144,7 +144,7 @@ async function main() {
       description: 'Creamy arborio rice with mixed mushrooms and parmesan',
       price: 12.00,
       category: MenuCategory.MAIN,
-      weekday: Weekday.TUESDAY,
+      weekdays: [Weekday.TUESDAY, Weekday.FRIDAY],
       dietaryTags: ['Vegetarian', 'Gluten-Free'],
     },
     // WEDNESDAY
@@ -153,7 +153,7 @@ async function main() {
       description: 'Juicy beef patty with lettuce, tomato, cheese, and crispy fries',
       price: 13.00,
       category: MenuCategory.MAIN,
-      weekday: Weekday.WEDNESDAY,
+      weekdays: [Weekday.WEDNESDAY],
       dietaryTags: [],
     },
     {
@@ -161,7 +161,7 @@ async function main() {
       description: 'Chicken in coconut green curry sauce with vegetables and jasmine rice',
       price: 13.50,
       category: MenuCategory.MAIN,
-      weekday: Weekday.WEDNESDAY,
+      weekdays: [Weekday.WEDNESDAY, Weekday.FRIDAY],
       dietaryTags: ['Gluten-Free', 'Dairy-Free'],
     },
     {
@@ -169,7 +169,7 @@ async function main() {
       description: 'Crispy falafel with hummus, lettuce, tomato in a warm pita',
       price: 10.50,
       category: MenuCategory.MAIN,
-      weekday: Weekday.WEDNESDAY,
+      weekdays: [Weekday.WEDNESDAY, Weekday.THURSDAY],
       dietaryTags: ['Vegetarian', 'Vegan'],
     },
     // THURSDAY
@@ -178,7 +178,7 @@ async function main() {
       description: 'Slow-roasted beef with rich gravy, mashed potatoes, and seasonal vegetables',
       price: 14.50,
       category: MenuCategory.MAIN,
-      weekday: Weekday.THURSDAY,
+      weekdays: [Weekday.THURSDAY],
       dietaryTags: ['Gluten-Free'],
     },
     {
@@ -186,7 +186,7 @@ async function main() {
       description: 'Traditional Thai stir-fried noodles with prawns, peanuts, and lime',
       price: 13.00,
       category: MenuCategory.MAIN,
-      weekday: Weekday.THURSDAY,
+      weekdays: [Weekday.THURSDAY],
       dietaryTags: ['Gluten-Free-Optional'],
     },
     {
@@ -194,7 +194,7 @@ async function main() {
       description: 'Creamy roasted pumpkin soup with crusty bread',
       price: 9.00,
       category: MenuCategory.MAIN,
-      weekday: Weekday.THURSDAY,
+      weekdays: [Weekday.THURSDAY, Weekday.FRIDAY],
       dietaryTags: ['Vegetarian', 'Vegan-Optional'],
     },
     // FRIDAY
@@ -203,7 +203,7 @@ async function main() {
       description: 'Beer-battered fish fillets with golden fries and tartare sauce',
       price: 14.00,
       category: MenuCategory.MAIN,
-      weekday: Weekday.FRIDAY,
+      weekdays: [Weekday.FRIDAY],
       dietaryTags: [],
     },
     {
@@ -211,7 +211,7 @@ async function main() {
       description: 'Tender chicken in rich tomato cream sauce, served with naan and rice',
       price: 13.50,
       category: MenuCategory.MAIN,
-      weekday: Weekday.FRIDAY,
+      weekdays: [Weekday.FRIDAY],
       dietaryTags: ['Gluten-Free-Optional'],
     },
     {
@@ -219,14 +219,13 @@ async function main() {
       description: 'Classic pizza with tomato sauce, fresh mozzarella, and basil',
       price: 11.50,
       category: MenuCategory.MAIN,
-      weekday: Weekday.FRIDAY,
+      weekdays: [Weekday.FRIDAY],
       dietaryTags: ['Vegetarian'],
     },
   ];
 
   for (const item of menuItems) {
-    const weekdayStr = item.weekday.toLowerCase();
-    const itemId = `${weekdayStr}-${item.name.toLowerCase().replace(/\s+/g, '-')}`;
+    const itemId = item.name.toLowerCase().replace(/\s+/g, '-');
     await prisma.menuItem.upsert({
       where: { id: itemId },
       update: {},
@@ -236,7 +235,7 @@ async function main() {
       },
     });
   }
-  console.log('✅ Sample menu items created for all weekdays');
+  console.log('✅ Sample menu items created with multiple weekdays support');
 
   // Add customizations for some items
   const caesarSalad = await prisma.menuItem.findFirst({

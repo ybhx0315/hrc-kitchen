@@ -12,7 +12,7 @@ interface CreateMenuItemData {
   description: string;
   price: number;
   category: Category;
-  weekday: Weekday;
+  weekdays: Weekday[];
   imageUrl?: string;
   dietaryTags?: string[];
   isActive: boolean;
@@ -23,7 +23,7 @@ interface UpdateMenuItemData {
   description?: string;
   price?: number;
   category?: Category;
-  weekday?: Weekday;
+  weekdays?: Weekday[];
   imageUrl?: string;
   dietaryTags?: string[];
   isActive?: boolean;
@@ -46,7 +46,7 @@ export class AdminService {
         description: data.description,
         price: data.price,
         category: data.category,
-        weekday: data.weekday,
+        weekdays: data.weekdays,
         imageUrl: data.imageUrl || null,
         dietaryTags: data.dietaryTags || [],
         isActive: data.isActive,
@@ -71,7 +71,7 @@ export class AdminService {
           ...(data.description !== undefined && { description: data.description }),
           ...(data.price !== undefined && { price: data.price }),
           ...(data.category !== undefined && { category: data.category }),
-          ...(data.weekday !== undefined && { weekday: data.weekday }),
+          ...(data.weekdays !== undefined && { weekdays: data.weekdays }),
           ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl }),
           ...(data.dietaryTags !== undefined && { dietaryTags: data.dietaryTags }),
           ...(data.isActive !== undefined && { isActive: data.isActive }),

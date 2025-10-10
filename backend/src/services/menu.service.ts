@@ -35,7 +35,9 @@ export class MenuService {
 
     const items = await prisma.menuItem.findMany({
       where: {
-        weekday,
+        weekdays: {
+          has: weekday,
+        },
         isActive: true,
       },
       include: {
@@ -83,19 +85,18 @@ export class MenuService {
         },
       },
       orderBy: [
-        { weekday: 'asc' },
         { category: 'asc' },
         { name: 'asc' },
       ],
     });
 
-    // Group by weekday
+    // Group by weekday - items can appear in multiple days
     const groupedByWeekday = {
-      MONDAY: items.filter(item => item.weekday === 'MONDAY'),
-      TUESDAY: items.filter(item => item.weekday === 'TUESDAY'),
-      WEDNESDAY: items.filter(item => item.weekday === 'WEDNESDAY'),
-      THURSDAY: items.filter(item => item.weekday === 'THURSDAY'),
-      FRIDAY: items.filter(item => item.weekday === 'FRIDAY'),
+      MONDAY: items.filter(item => item.weekdays.includes('MONDAY')),
+      TUESDAY: items.filter(item => item.weekdays.includes('TUESDAY')),
+      WEDNESDAY: items.filter(item => item.weekdays.includes('WEDNESDAY')),
+      THURSDAY: items.filter(item => item.weekdays.includes('THURSDAY')),
+      FRIDAY: items.filter(item => item.weekdays.includes('FRIDAY')),
     };
 
     return groupedByWeekday;

@@ -19,7 +19,7 @@ HRC Kitchen is a web-based lunch ordering system for Huon Regional Care staff, f
 - Non-technical menu management interface
 
 ## Development Status
-- **Current Phase**: MVP Complete + Guest Checkout Enhancement
+- **Current Phase**: MVP Complete + Multi-Weekday Menu Support
 - **Completed**:
   - ✅ Project structure and monorepo setup
   - ✅ Backend API foundation (Node.js/Express/TypeScript)
@@ -87,6 +87,12 @@ HRC Kitchen is a web-based lunch ordering system for Huon Regional Care staff, f
     - Time validation (HH:MM format, end after start)
     - Admin dashboard with tabbed navigation
     - Three-panel interface: Menu Management, User Management, System Config
+    - **Multi-Weekday Menu Support**:
+      - Menu items can be assigned to multiple weekdays (checkbox selection)
+      - Items appear on all selected days in weekly view
+      - Database schema uses `weekdays: Weekday[]` array field
+      - Admin UI shows weekday chips for each assigned day
+      - Validation requires at least one weekday selection
   - ✅ **Phase 5 Complete**: Guest Checkout & UX Improvements
     - **Guest Checkout System**:
       - Database schema updates: nullable `userId`, added `guestEmail`, `guestFirstName`, `guestLastName` fields
@@ -162,8 +168,8 @@ npm run dev  # Starts both backend (port 3000) and frontend (port 5173)
   - Payment IDs stored directly on Order model
 
 - **Admin Service** (`backend/src/services/admin.service.ts`):
-  - `createMenuItem()` - Create new menu items with dietary tags and customizations
-  - `updateMenuItem()` - Update existing menu items
+  - `createMenuItem()` - Create new menu items with dietary tags, customizations, and multiple weekdays
+  - `updateMenuItem()` - Update existing menu items including weekday assignments
   - `deleteMenuItem()` - Soft delete (deactivate) or permanently delete menu items
   - `addCustomization()` - Add customization options to menu items
   - `deleteCustomization()` - Remove customization options
@@ -234,9 +240,11 @@ npm run dev  # Starts both backend (port 3000) and frontend (port 5173)
     - Upload progress indicator
     - Dietary tag selection (Vegetarian, Vegan, Gluten-Free, Dairy-Free, Nut-Free, Halal)
     - Category assignment (Main, Side, Drink, Dessert, Other)
+    - **Multi-weekday selection** (checkboxes for Monday-Friday, at least one required)
+    - Items automatically appear on all selected weekdays
     - Active/inactive toggle for menu items
     - Visual card-based layout with images
-    - Contextual chips showing weekday/category based on view mode
+    - Contextual chips showing all assigned weekdays/category based on view mode
     - **Variation Management**:
       - Inline group creation/editing (no modal dialogs)
       - Inline option creation/editing within groups
@@ -308,9 +316,9 @@ npm run dev  # Starts both backend (port 3000) and frontend (port 5173)
 - Stripe test mode enabled - use test cards for payment testing
 - Use Stripe test card: `4242 4242 4242 4242`, any future expiry, any CVC
 
-## Database Schema Changes (Phase 5)
+## Database Schema Changes
 
-### Order Model Updates
+### Order Model Updates (Phase 5)
 Added support for guest orders with nullable user relationship:
 
 ```prisma
@@ -327,9 +335,28 @@ model Order {
 
 **Migration**: `20251009000000_add_guest_checkout_support.sql`
 
-## API Endpoints (Phase 5)
+### MenuItem Model Updates (Multi-Weekday Support)
+Changed single weekday field to array for multiple weekday assignments:
 
-### Guest Order Endpoints
+```prisma
+model MenuItem {
+  weekdays        Weekday[]     @default([])  // Changed from: weekday Weekday
+
+  @@index([isActive])  // Removed weekday from index
+}
+```
+
+**Migration**: `20251010000000_add_multiple_weekdays_support.sql`
+
+**Data Migration Steps**:
+1. Adds `weekdays` array column with default empty array
+2. Migrates existing `weekday` value to `weekdays` array: `UPDATE menu_items SET weekdays = ARRAY[weekday]`
+3. Drops old `weekday` column
+4. Updates index from `(weekday, isActive)` to `(isActive)` only
+
+## API Endpoints
+
+### Guest Order Endpoints (Phase 5)
 - `POST /api/v1/orders/guest` - Create guest order (no authentication required)
   - Request body: `{ items, deliveryNotes, guestInfo: { firstName, lastName, email } }`
   - Returns: `{ order, clientSecret }` or `409` if email exists

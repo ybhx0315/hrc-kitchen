@@ -49,7 +49,7 @@ interface MenuItem {
   description: string;
   price: number;
   category: string;
-  weekday: string;
+  weekdays: string[];
   imageUrl: string | null;
   dietaryTags: string[];
   isActive: boolean;
@@ -84,7 +84,7 @@ const MenuManagement = () => {
     description: '',
     price: '',
     category: 'MAIN',
-    weekday: WEEKDAYS[0],
+    weekdays: [] as string[],
     imageUrl: '',
     dietaryTags: [] as string[],
     isActive: true,
@@ -118,7 +118,7 @@ const MenuManagement = () => {
         description: item.description,
         price: item.price.toString(),
         category: item.category,
-        weekday: item.weekday,
+        weekdays: item.weekdays,
         imageUrl: item.imageUrl || '',
         dietaryTags: item.dietaryTags,
         isActive: item.isActive,
@@ -131,7 +131,7 @@ const MenuManagement = () => {
         description: '',
         price: '',
         category: 'MAIN',
-        weekday: WEEKDAYS[currentWeekday],
+        weekdays: viewMode === 'weekday' ? [WEEKDAYS[currentWeekday]] : [],
         imageUrl: '',
         dietaryTags: [],
         isActive: true,
@@ -152,6 +152,11 @@ const MenuManagement = () => {
 
       if (!formData.name || !formData.price) {
         setError('Name and price are required');
+        return;
+      }
+
+      if (!formData.weekdays || formData.weekdays.length === 0) {
+        setError('At least one weekday must be selected');
         return;
       }
 
@@ -476,9 +481,9 @@ const MenuManagement = () => {
                     {viewMode !== 'category' && (
                       <Chip label={item.category} size="small" color="primary" />
                     )}
-                    {viewMode !== 'weekday' && (
-                      <Chip label={item.weekday} size="small" color="secondary" />
-                    )}
+                    {viewMode !== 'weekday' && item.weekdays.map((day) => (
+                      <Chip key={day} label={day} size="small" color="secondary" />
+                    ))}
                     {!item.isActive && (
                       <Chip label="Inactive" size="small" color="error" />
                     )}
@@ -565,20 +570,37 @@ const MenuManagement = () => {
                 ))}
               </Select>
             </FormControl>
-            <FormControl fullWidth>
-              <InputLabel>Weekday</InputLabel>
-              <Select
-                value={formData.weekday}
-                label="Weekday"
-                onChange={(e) => setFormData({ ...formData, weekday: e.target.value })}
-              >
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>
+                Weekdays *
+              </Typography>
+              <FormGroup row>
                 {WEEKDAYS.map((day) => (
-                  <MenuItem key={day} value={day}>
-                    {day}
-                  </MenuItem>
+                  <FormControlLabel
+                    key={day}
+                    control={
+                      <Checkbox
+                        checked={formData.weekdays.includes(day)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFormData({
+                              ...formData,
+                              weekdays: [...formData.weekdays, day],
+                            });
+                          } else {
+                            setFormData({
+                              ...formData,
+                              weekdays: formData.weekdays.filter((d) => d !== day),
+                            });
+                          }
+                        }}
+                      />
+                    }
+                    label={day}
+                  />
                 ))}
-              </Select>
-            </FormControl>
+              </FormGroup>
+            </Box>
 
             <Box>
               <Typography variant="subtitle2" gutterBottom>
